@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>דשבורד מנהל — תכנית ב׳ מעגל השנה</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #f2f2f0; color: #1a1a1a; direction: rtl; font-size: 14px; }
+
+.topbar { background: #0C447C; color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+.topbar h1 { font-size: 17px; font-weight: 700; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.refresh-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: Arial, sans-serif; }
+.refresh-btn:hover { background: rgba(255,255,255,0.25); }
+.last-update { font-size: 12px; opacity: 0.75; }
+
+.page { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
+
+/* Loading */
+.loading { text-align: center; padding: 60px 20px; color: #666; font-size: 15px; }
+.loading-spinner { width: 36px; height: 36px; border: 3px solid #ddd; border-top-color: #185FA5; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Error */
+.error-box { background: #FCEBEB; border: 1px solid #F09595; border-radius: 10px; padding: 16px 20px; color: #A32D2D; font-size: 14px; margin: 20px 0; }
+
+/* Filters */
+.filters { background: #fff; border-radius: 10px; border: 1px solid #e0e0dc; padding: 12px 16px; margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.filter-group { display: flex; flex-direction: column; gap: 4px; }
+.filter-group label { font-size: 11px; color: #666; font-weight: 600; }
+.filter-group select, .filter-group input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: Arial, sans-serif; background: #fff; color: #1a1a1a; min-width: 140px; }
+.filter-group select:focus, .filter-group input:focus { outline: none; border-color: #888; }
+.clear-btn { padding: 6px 14px; border: 1px solid #ddd; border-radius: 8px; background: #f5f5f3; cursor: pointer; font-size: 13px; font-family: Arial, sans-serif; color: #555; align-self: flex-end; }
+.clear-btn:hover { background: #eee; }
+
+/* Stat cards */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat-card { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 14px 16px; }
+.stat-label { font-size: 12px; color: #666; margin-bottom: 6px; }
+.stat-num { font-size: 28px; font-weight: 700; line-height: 1; }
+.stat-sub { font-size: 12px; color: #888; margin-top: 4px; }
+.stat-blue .stat-num { color: #185FA5; }
+.stat-green .stat-num { color: #3B6D11; }
+.stat-red .stat-num { color: #A32D2D; }
+.stat-amber .stat-num { color: #854F0B; }
+
+/* Charts row */
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.chart-card { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 16px; }
+.chart-title { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 14px; }
+.chart-wrap { position: relative; }
+
+/* Fail list */
+.fail-section { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+.section-title { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 12px; }
+.fail-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f0f0ee; }
+.fail-item:last-child { border-bottom: none; }
+.fail-bar-wrap { flex: 1; background: #f0f0ee; border-radius: 99px; height: 8px; overflow: hidden; }
+.fail-bar { height: 100%; background: #E24B4A; border-radius: 99px; }
+.fail-label { font-size: 12px; color: #333; min-width: 0; flex: 2; line-height: 1.4; }
+.fail-pct { font-size: 13px; font-weight: 700; color: #A32D2D; min-width: 40px; text-align: left; }
+.fail-count { font-size: 11px; color: #888; min-width: 50px; text-align: left; }
+
+/* Inspector / Branch tables */
+.tables-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.table-card { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 16px; overflow: hidden; }
+.perf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.perf-table th { text-align: right; padding: 6px 8px; font-size: 11px; color: #666; font-weight: 600; border-bottom: 1px solid #e0e0dc; }
+.perf-table td { padding: 7px 8px; border-bottom: 1px solid #f5f5f3; }
+.perf-table tr:last-child td { border-bottom: none; }
+.badge-ok { display: inline-block; padding: 2px 8px; border-radius: 99px; background: #EAF3DE; color: #3B6D11; font-size: 11px; font-weight: 600; }
+.badge-nok { display: inline-block; padding: 2px 8px; border-radius: 99px; background: #FCEBEB; color: #A32D2D; font-size: 11px; font-weight: 600; }
+.mini-bar-wrap { background: #f0f0ee; border-radius: 99px; height: 6px; margin-top: 3px; overflow: hidden; }
+.mini-bar-ok { height: 100%; background: #639922; border-radius: 99px; }
+
+/* All inspections table */
+.all-table-card { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 16px; margin-bottom: 16px; overflow: hidden; }
+.table-scroll { overflow-x: auto; }
+.all-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 600px; }
+.all-table th { text-align: right; padding: 8px 10px; font-size: 11px; color: #666; font-weight: 600; border-bottom: 1px solid #e0e0dc; white-space: nowrap; background: #fafaf8; }
+.all-table td { padding: 8px 10px; border-bottom: 1px solid #f5f5f3; vertical-align: top; }
+.all-table tr:last-child td { border-bottom: none; }
+.all-table tr:hover td { background: #fafaf8; }
+.expand-btn { background: none; border: none; cursor: pointer; color: #185FA5; font-size: 12px; padding: 0; font-family: Arial, sans-serif; }
+.detail-row { display: none; }
+.detail-row.open { display: table-row; }
+.detail-cell { padding: 10px 16px !important; background: #fafaf8 !important; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
+.detail-item { font-size: 12px; padding: 4px 6px; border-radius: 6px; }
+.detail-ok { background: #EAF3DE; color: #3B6D11; }
+.detail-nok { background: #FCEBEB; color: #A32D2D; }
+.detail-empty { color: #aaa; font-style: italic; }
+.note-text { font-size: 11px; color: #666; margin-top: 2px; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 40px 20px; color: #888; }
+.empty-state p { font-size: 14px; }
+
+@media (max-width: 650px) {
+  .charts-row, .tables-row { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>דשבורד מנהל — תכנית ב׳: אירועים במעגל השנה</h1>
+  <div class="topbar-right">
+    <span class="last-update" id="last-update"></span>
+    <button class="refresh-btn" onclick="loadData()">רענן נתונים ↻</button>
+  </div>
+</div>
+
+<div class="page">
+  <div id="loading" class="loading">
+    <div class="loading-spinner"></div>
+    <p>טוען נתונים מ-Google Sheets...</p>
+  </div>
+  <div id="error-area"></div>
+  <div id="dashboard" style="display:none;"></div>
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYdcDqUglwWSe1lKKZYlHiJOxK8dOCJ9-wFAzy5bd9HTjHEp9D_RG_tw_qVn-2yukF/exec";
+
+const ITEM_LABELS = {
+  s1i1:"מיקום — בתוך/סמוך לקמפוס, תיאום עם המוסד",
+  s1i2:"מבנה — חדר ל-50+ סטודנטים",
+  s1i3:"מבנה — מרחב נוסף ל-150+ סטודנטים",
+  s2i1:"פעילות ערב — פעמיים בשבוע, 2.5 שעות",
+  s2i2:"נוכחות רכז מקומי (או מחליף)",
+  s2i3:"זמינות טלפונית לסטודנטים",
+  s2i4:"מערך התנדבות בקהילה",
+  s3i1:"מפגש לימוד שבועי ע\"י גורם חיצוני",
+  s3i2:"משך מפגש לימוד — 45 דק' לפחות",
+  s3i3:"נושא פורסם מראש לחשיפה רחבה",
+  s3i4:"תוכן — נושאי זהות יהודית",
+  s4i1:"הרצאה ייחודית חודשית — 50+ סטודנטים",
+  s4i2:"משך הרצאה ייחודית — 90 דק' לפחות",
+  s4i3:"פרסום שבועיים מראש",
+  s4i4:"כיבוד קל בהרצאה",
+  s5i1:"עונג שבת — 15+ סטודנטים, 90 דק'",
+  s5i2:"פעילות זהות יהודית בעונג שבת",
+  s5i3:"כיבוד קל בעונג שבת",
+  s6i1:"אירועי שיא סמוך לחגים",
+  s6i2:"אירוע פתוח לסטודנטים מזדמנים",
+  s6i3:"תוכן מבוסס מעגל השנה",
+  s7i1:"רכז מקומי ממונה בסניף",
+  s7i2:"פתיחת סניף אושרה ע\"י המשרד",
+  s7i3:"תיאום עם המוסד ואגודת סטודנטים",
+  s8i1:"דוח ביצוע חודשי — Excel + נספח 14",
+  s8i2:"רשימת סניפים פעילים — רבעונית",
+  s8i3:"דוח כולל מועדים, תוכן, מספר משתתפים",
+  s8i4:"כרטסת הנה\"ח מצורפת"
+};
+
+const CRITICAL = ["s1i2","s1i3","s2i1","s3i1","s3i2","s4i1","s4i2","s5i1","s6i1"];
+const ALL_IDS = Object.keys(ITEM_LABELS);
+
+let allRows = [];
+let filteredRows = [];
+let charts = {};
+
+function loadData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('error-area').innerHTML = '';
+
+  fetch(SCRIPT_URL + "?t=" + Date.now())
+    .then(r => r.json())
+    .then(data => {
+      allRows = data.rows || [];
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('last-update').textContent = 'עודכן: ' + new Date().toLocaleTimeString('he-IL');
+      buildDashboard();
+    })
+    .catch(err => {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error-area').innerHTML =
+        '<div class="error-box">שגיאה בטעינת הנתונים. בדוק שה-Apps Script פורסם כראוי ושה-URL נכון.<br><small>' + err.message + '</small></div>';
+    });
+}
+
+function buildDashboard() {
+  populateFilters();
+  applyFilters();
+}
+
+function populateFilters() {
+  const inspectors = [...new Set(allRows.map(r => r['שם בקר']).filter(Boolean))].sort();
+  const branches = [...new Set(allRows.map(r => r['שם סניף']).filter(Boolean))].sort();
+
+  const dash = document.getElementById('dashboard');
+  dash.style.display = 'block';
+
+  if (!document.getElementById('filter-bar')) {
+    dash.innerHTML = buildFiltersHTML(inspectors, branches) + '<div id="content-area"></div>';
+  } else {
+    const ins = document.getElementById('f-inspector');
+    const br = document.getElementById('f-branch');
+    const cur_i = ins.value, cur_b = br.value;
+    ins.innerHTML = '<option value="">כל הבקרים</option>' + inspectors.map(i => '<option value="'+i+'"'+(i===cur_i?' selected':'')+'>'+i+'</option>').join('');
+    br.innerHTML = '<option value="">כל הסניפים</option>' + branches.map(b => '<option value="'+b+'"'+(b===cur_b?' selected':'')+'>'+b+'</option>').join('');
+  }
+}
+
+function buildFiltersHTML(inspectors, branches) {
+  return '<div id="filter-bar" class="filters">' +
+    '<div class="filter-group"><label>בקר</label>' +
+    '<select id="f-inspector" onchange="applyFilters()">' +
+    '<option value="">כל הבקרים</option>' +
+    inspectors.map(i => '<option value="'+i+'">'+i+'</option>').join('') +
+    '</select></div>' +
+    '<div class="filter-group"><label>סניף</label>' +
+    '<select id="f-branch" onchange="applyFilters()">' +
+    '<option value="">כל הסניפים</option>' +
+    branches.map(b => '<option value="'+b+'">'+b+'</option>').join('') +
+    '</select></div>' +
+    '<div class="filter-group"><label>מתאריך</label>' +
+    '<input type="date" id="f-from" onchange="applyFilters()"></div>' +
+    '<div class="filter-group"><label>עד תאריך</label>' +
+    '<input type="date" id="f-to" onchange="applyFilters()"></div>' +
+    '<button class="clear-btn" onclick="clearFilters()">נקה סינון</button>' +
+    '</div>';
+}
+
+function clearFilters() {
+  document.getElementById('f-inspector').value = '';
+  document.getElementById('f-branch').value = '';
+  document.getElementById('f-from').value = '';
+  document.getElementById('f-to').value = '';
+  applyFilters();
+}
+
+function applyFilters() {
+  const ins = document.getElementById('f-inspector') ? document.getElementById('f-inspector').value : '';
+  const br = document.getElementById('f-branch') ? document.getElementById('f-branch').value : '';
+  const from = document.getElementById('f-from') ? document.getElementById('f-from').value : '';
+  const to = document.getElementById('f-to') ? document.getElementById('f-to').value : '';
+
+  filteredRows = allRows.filter(r => {
+    if (ins && r['שם בקר'] !== ins) return false;
+    if (br && r['שם סניף'] !== br) return false;
+    if (from || to) {
+      const d = new Date(r['תאריך']);
+      if (from && d < new Date(from)) return false;
+      if (to && d > new Date(to + 'T23:59:59')) return false;
+    }
+    return true;
+  });
+
+  renderContent();
+}
+
+function renderContent() {
+  const area = document.getElementById('content-area');
+  if (!filteredRows.length) {
+    area.innerHTML = '<div class="empty-state"><p>אין בקרות התואמות את הסינון הנוכחי</p></div>';
+    return;
+  }
+
+  area.innerHTML =
+    renderStats() +
+    '<div class="charts-row">' + renderTrendChartHTML() + renderInspectorChartHTML() + '</div>' +
+    renderFailList() +
+    '<div class="tables-row">' + renderInspectorTable() + renderBranchTable() + '</div>' +
+    renderAllTable();
+
+  drawTrendChart();
+  drawInspectorChart();
+}
+
+function getStats() {
+  let totalChecks = 0, okChecks = 0, nokChecks = 0, criticalFails = 0;
+  filteredRows.forEach(r => {
+    ALL_IDS.forEach(id => {
+      const v = r[id];
+      if (v === 'ok') { totalChecks++; okChecks++; }
+      else if (v === 'nok') { totalChecks++; nokChecks++; }
+    });
+    CRITICAL.forEach(id => { if (r[id] === 'nok') criticalFails++; });
+  });
+  const okPct = totalChecks ? Math.round(okChecks / totalChecks * 100) : 0;
+  return { total: filteredRows.length, totalChecks, okChecks, nokChecks, okPct, criticalFails };
+}
+
+function renderStats() {
+  const s = getStats();
+  return '<div class="stats-grid">' +
+    statCard('סה״כ בקרות', s.total, '', 'stat-blue') +
+    statCard('ממוצע תקין', s.okPct + '%', 'מכלל הסעיפים שמולאו', 'stat-green') +
+    statCard('ממצאים לא תקינים', s.nokChecks, 'סעיפים שנכשלו', 'stat-red') +
+    statCard('כשלים בסעיפי חובה', s.criticalFails, 'דורשים טיפול מיידי', 'stat-amber') +
+    '</div>';
+}
+
+function statCard(label, num, sub, cls) {
+  return '<div class="stat-card ' + cls + '">' +
+    '<div class="stat-label">' + label + '</div>' +
+    '<div class="stat-num">' + num + '</div>' +
+    (sub ? '<div class="stat-sub">' + sub + '</div>' : '') +
+    '</div>';
+}
+
+function renderTrendChartHTML() {
+  return '<div class="chart-card"><div class="chart-title">מגמת בקרות לאורך זמן</div>' +
+    '<div class="chart-wrap" style="height:200px;"><canvas id="chart-trend"></canvas></div></div>';
+}
+
+function renderInspectorChartHTML() {
+  return '<div class="chart-card"><div class="chart-title">אחוז תקין לפי בקר</div>' +
+    '<div class="chart-wrap" style="height:200px;"><canvas id="chart-inspector"></canvas></div></div>';
+}
+
+function drawTrendChart() {
+  const byMonth = {};
+  filteredRows.forEach(r => {
+    const d = new Date(r['תאריך']);
+    if (isNaN(d)) return;
+    const key = d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0');
+    byMonth[key] = (byMonth[key] || 0) + 1;
+  });
+  const labels = Object.keys(byMonth).sort();
+  const vals = labels.map(k => byMonth[k]);
+
+  if (charts['trend']) charts['trend'].destroy();
+  const ctx = document.getElementById('chart-trend');
+  if (!ctx) return;
+  charts['trend'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{ label: 'בקרות', data: vals, backgroundColor: '#378ADD', borderRadius: 5 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { family: 'Arial', size: 11 } } },
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Arial', size: 11 } } }
+      }
+    }
+  });
+}
+
+function drawInspectorChart() {
+  const byIns = {};
+  filteredRows.forEach(r => {
+    const name = r['שם בקר'] || 'לא ידוע';
+    if (!byIns[name]) byIns[name] = { ok: 0, total: 0 };
+    ALL_IDS.forEach(id => {
+      const v = r[id];
+      if (v === 'ok' || v === 'nok') { byIns[name].total++; if (v === 'ok') byIns[name].ok++; }
+    });
+  });
+  const labels = Object.keys(byIns);
+  const vals = labels.map(k => byIns[k].total ? Math.round(byIns[k].ok / byIns[k].total * 100) : 0);
+  const colors = vals.map(v => v >= 80 ? '#639922' : v >= 60 ? '#EF9F27' : '#E24B4A');
+
+  if (charts['inspector']) charts['inspector'].destroy();
+  const ctx = document.getElementById('chart-inspector');
+  if (!ctx) return;
+  charts['inspector'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{ label: '% תקין', data: vals, backgroundColor: colors, borderRadius: 5 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', font: { family: 'Arial', size: 11 } } },
+        y: { ticks: { font: { family: 'Arial', size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderFailList() {
+  const counts = {};
+  ALL_IDS.forEach(id => { counts[id] = 0; });
+  filteredRows.forEach(r => { ALL_IDS.forEach(id => { if (r[id] === 'nok') counts[id]++; }); });
+  const total = filteredRows.length;
+  const sorted = ALL_IDS.map(id => ({ id, count: counts[id], pct: total ? Math.round(counts[id]/total*100) : 0 }))
+    .filter(x => x.count > 0)
+    .sort((a,b) => b.count - a.count)
+    .slice(0, 10);
+
+  if (!sorted.length) return '<div class="fail-section"><div class="section-title">סעיפים עם הכי הרבה כשלים</div><div class="empty-state"><p>אין כשלים — מצוין!</p></div></div>';
+
+  return '<div class="fail-section"><div class="section-title">סעיפים עם הכי הרבה כשלים (עד 10)</div>' +
+    sorted.map(x =>
+      '<div class="fail-item">' +
+      '<div class="fail-label">' + (CRITICAL.includes(x.id) ? '<strong>⚑ </strong>' : '') + ITEM_LABELS[x.id] + '</div>' +
+      '<div class="fail-bar-wrap"><div class="fail-bar" style="width:' + x.pct + '%"></div></div>' +
+      '<div class="fail-pct">' + x.pct + '%</div>' +
+      '<div class="fail-count">' + x.count + ' מתוך ' + total + '</div>' +
+      '</div>'
+    ).join('') + '</div>';
+}
+
+function renderInspectorTable() {
+  const byIns = {};
+  filteredRows.forEach(r => {
+    const name = r['שם בקר'] || 'לא ידוע';
+    if (!byIns[name]) byIns[name] = { count: 0, ok: 0, total: 0 };
+    byIns[name].count++;
+    ALL_IDS.forEach(id => {
+      const v = r[id];
+      if (v === 'ok' || v === 'nok') { byIns[name].total++; if (v === 'ok') byIns[name].ok++; }
+    });
+  });
+  const rows = Object.entries(byIns).sort((a,b) => b[1].count - a[1].count);
+
+  return '<div class="table-card"><div class="section-title">ביצועים לפי בקר</div>' +
+    '<table class="perf-table"><thead><tr>' +
+    '<th>בקר</th><th>בקרות</th><th>% תקין</th>' +
+    '</tr></thead><tbody>' +
+    rows.map(([name, d]) => {
+      const pct = d.total ? Math.round(d.ok/d.total*100) : 0;
+      const cls = pct >= 80 ? 'badge-ok' : 'badge-nok';
+      return '<tr><td>' + name + '</td><td>' + d.count + '</td>' +
+        '<td><span class="' + cls + '">' + pct + '%</span>' +
+        '<div class="mini-bar-wrap"><div class="mini-bar-ok" style="width:' + pct + '%"></div></div></td></tr>';
+    }).join('') +
+    '</tbody></table></div>';
+}
+
+function renderBranchTable() {
+  const byBr = {};
+  filteredRows.forEach(r => {
+    const name = (r['שם סניף'] || 'לא ידוע') + (r['מוסד אקדמי'] ? ' — ' + r['מוסד אקדמי'] : '');
+    if (!byBr[name]) byBr[name] = { count: 0, ok: 0, total: 0 };
+    byBr[name].count++;
+    ALL_IDS.forEach(id => {
+      const v = r[id];
+      if (v === 'ok' || v === 'nok') { byBr[name].total++; if (v === 'ok') byBr[name].ok++; }
+    });
+  });
+  const rows = Object.entries(byBr).sort((a,b) => b[1].count - a[1].count);
+
+  return '<div class="table-card"><div class="section-title">ביצועים לפי סניף</div>' +
+    '<table class="perf-table"><thead><tr>' +
+    '<th>סניף / מוסד</th><th>בקרות</th><th>% תקין</th>' +
+    '</tr></thead><tbody>' +
+    rows.map(([name, d]) => {
+      const pct = d.total ? Math.round(d.ok/d.total*100) : 0;
+      const cls = pct >= 80 ? 'badge-ok' : 'badge-nok';
+      return '<tr><td>' + name + '</td><td>' + d.count + '</td>' +
+        '<td><span class="' + cls + '">' + pct + '%</span>' +
+        '<div class="mini-bar-wrap"><div class="mini-bar-ok" style="width:' + pct + '%"></div></div></td></tr>';
+    }).join('') +
+    '</tbody></table></div>';
+}
+
+function renderAllTable() {
+  const sorted = [...filteredRows].sort((a,b) => new Date(b['תאריך']) - new Date(a['תאריך']));
+
+  return '<div class="all-table-card"><div class="section-title">כל הבקרות (' + sorted.length + ')</div>' +
+    '<div class="table-scroll"><table class="all-table"><thead><tr>' +
+    '<th>תאריך</th><th>בקר</th><th>סניף</th><th>מוסד</th><th>תקין</th><th>לא תקין</th><th></th>' +
+    '</tr></thead><tbody>' +
+    sorted.map((r, i) => {
+      const ok = ALL_IDS.filter(id => r[id] === 'ok').length;
+      const nok = ALL_IDS.filter(id => r[id] === 'nok').length;
+      const d = new Date(r['תאריך']);
+      const dateStr = isNaN(d) ? r['תאריך'] : d.toLocaleDateString('he-IL');
+      return '<tr>' +
+        '<td>' + dateStr + '</td>' +
+        '<td>' + (r['שם בקר'] || '') + '</td>' +
+        '<td>' + (r['שם סניף'] || '') + '</td>' +
+        '<td>' + (r['מוסד אקדמי'] || '') + '</td>' +
+        '<td><span class="badge-ok">' + ok + '</span></td>' +
+        '<td>' + (nok > 0 ? '<span class="badge-nok">' + nok + '</span>' : '<span style="color:#aaa">0</span>') + '</td>' +
+        '<td><button class="expand-btn" onclick="toggleDetail(this,' + i + ')">פירוט ▾</button></td>' +
+        '</tr>' +
+        '<tr id="detail-' + i + '" class="detail-row"><td class="detail-cell" colspan="7">' +
+        buildDetailGrid(r) +
+        '</td></tr>';
+    }).join('') +
+    '</tbody></table></div></div>';
+}
+
+function buildDetailGrid(r) {
+  const nok = ALL_IDS.filter(id => r[id] === 'nok');
+  const notes = ALL_IDS.filter(id => r['הערות_' + id] && r['הערות_' + id].toString().trim());
+
+  let html = '<div style="margin-bottom:8px;">';
+  if (nok.length === 0) {
+    html += '<span style="color:#3B6D11;font-size:13px;font-weight:600;">✓ כל הסעיפים תקינים</span>';
+  } else {
+    html += '<div style="font-size:12px;font-weight:600;color:#A32D2D;margin-bottom:6px;">ממצאים לא תקינים:</div>';
+    html += '<div class="detail-grid">';
+    nok.forEach(id => {
+      const noteKey = 'הערות_' + id;
+      const note = r[noteKey] ? r[noteKey].toString().trim() : '';
+      html += '<div class="detail-item detail-nok">' +
+        (CRITICAL.includes(id) ? '⚑ ' : '') + ITEM_LABELS[id] +
+        (note ? '<div class="note-text">הערה: ' + note + '</div>' : '') +
+        '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  if (notes.length > 0) {
+    html += '<div style="font-size:12px;font-weight:600;color:#185FA5;margin-bottom:6px;margin-top:8px;">הערות נוספות:</div>';
+    html += '<div class="detail-grid">';
+    notes.forEach(id => {
+      if (r[id] !== 'nok') {
+        html += '<div class="detail-item detail-ok">' + ITEM_LABELS[id] +
+          '<div class="note-text">' + r['הערות_' + id] + '</div></div>';
+      }
+    });
+    html += '</div>';
+  }
+
+  return html;
+}
+
+function toggleDetail(btn, i) {
+  const row = document.getElementById('detail-' + i);
+  const isOpen = row.classList.contains('open');
+  row.classList.toggle('open');
+  btn.textContent = isOpen ? 'פירוט ▾' : 'סגור ▴';
+}
+
+loadData();
+</script>
+</body>
+</html>
