@@ -1,1 +1,0 @@
-# bkara-tochniit-bet-students
