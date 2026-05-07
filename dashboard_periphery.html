@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>דשבורד מנהל — מכרז פריפריה</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #f2f2f0; color: #1a1a1a; direction: rtl; font-size: 14px; }
+
+.topbar { background: #0C447C; color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+.topbar h1 { font-size: 17px; font-weight: 700; }
+.topbar-sub { font-size: 12px; opacity: 0.75; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.refresh-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: Arial, sans-serif; }
+.refresh-btn:hover { background: rgba(255,255,255,0.25); }
+.home-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: Arial, sans-serif; text-decoration: none; display: inline-block; }
+.home-btn:hover { background: rgba(255,255,255,0.2); }
+.last-update { font-size: 12px; opacity: 0.75; }
+
+.page { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
+
+.loading { text-align: center; padding: 60px 20px; color: #666; font-size: 15px; }
+.loading-spinner { width: 36px; height: 36px; border: 3px solid #ddd; border-top-color: #185FA5; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-box { background: #FCEBEB; border: 1px solid #F09595; border-radius: 10px; padding: 16px 20px; color: #A32D2D; font-size: 14px; margin: 20px 0; }
+
+.filters { background: #fff; border-radius: 10px; border: 1px solid #e0e0dc; padding: 12px 16px; margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.filter-group { display: flex; flex-direction: column; gap: 4px; }
+.filter-group label { font-size: 11px; color: #666; font-weight: 600; }
+.filter-group select, .filter-group input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: Arial, sans-serif; background: #fff; color: #1a1a1a; min-width: 140px; }
+.filter-group select:focus, .filter-group input:focus { outline: none; border-color: #888; }
+.clear-btn { padding: 6px 14px; border: 1px solid #ddd; border-radius: 8px; background: #f5f5f3; cursor: pointer; font-size: 13px; font-family: Arial, sans-serif; color: #555; align-self: flex-end; }
+.clear-btn:hover { background: #eee; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat-card { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 14px 16px; }
+.stat-label { font-size: 12px; color: #666; margin-bottom: 6px; }
+.stat-num { font-size: 28px; font-weight: 700; line-height: 1; }
+.stat-sub { font-size: 12px; color: #888; margin-top: 4px; }
+.stat-blue .stat-num { color: #185FA5; }
+.stat-green .stat-num { color: #3B6D11; }
+.stat-red .stat-num { color: #A32D2D; }
+.stat-amber .stat-num { color: #7B6200; }
+
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.chart-card { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 16px; }
+.chart-title { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 14px; }
+.chart-wrap { position: relative; }
+
+.fail-section { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+.section-title { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 12px; }
+.fail-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f0f0ee; }
+.fail-item:last-child { border-bottom: none; }
+.fail-bar-wrap { flex: 1; background: #f0f0ee; border-radius: 99px; height: 8px; overflow: hidden; }
+.fail-bar { height: 100%; background: #E24B4A; border-radius: 99px; }
+.fail-label { font-size: 12px; color: #333; min-width: 0; flex: 2; line-height: 1.4; }
+.fail-pct { font-size: 13px; font-weight: 700; color: #A32D2D; min-width: 40px; text-align: left; }
+.fail-count { font-size: 11px; color: #888; min-width: 50px; text-align: left; }
+
+.tables-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.table-card { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 16px; overflow: hidden; }
+.perf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.perf-table th { text-align: right; padding: 6px 8px; font-size: 11px; color: #666; font-weight: 600; border-bottom: 1px solid #e0e0dc; }
+.perf-table td { padding: 7px 8px; border-bottom: 1px solid #f5f5f3; }
+.perf-table tr:last-child td { border-bottom: none; }
+.badge-ok { display: inline-block; padding: 2px 8px; border-radius: 99px; background: #EAF3DE; color: #3B6D11; font-size: 11px; font-weight: 600; }
+.badge-nok { display: inline-block; padding: 2px 8px; border-radius: 99px; background: #FCEBEB; color: #A32D2D; font-size: 11px; font-weight: 600; }
+.mini-bar-wrap { background: #f0f0ee; border-radius: 99px; height: 6px; margin-top: 3px; overflow: hidden; }
+.mini-bar-ok { height: 100%; background: #639922; border-radius: 99px; }
+
+.all-table-card { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 16px; margin-bottom: 16px; overflow: hidden; }
+.table-scroll { overflow-x: auto; }
+.all-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 620px; }
+.all-table th { text-align: right; padding: 8px 10px; font-size: 11px; color: #666; font-weight: 600; border-bottom: 1px solid #e0e0dc; white-space: nowrap; background: #fafaf8; }
+.all-table td { padding: 8px 10px; border-bottom: 1px solid #f5f5f3; vertical-align: top; }
+.all-table tr:last-child td { border-bottom: none; }
+.all-table tr:hover td { background: #fafaf8; }
+.expand-btn { background: none; border: none; cursor: pointer; color: #185FA5; font-size: 12px; padding: 0; font-family: Arial, sans-serif; }
+.detail-row { display: none; }
+.detail-row.open { display: table-row; }
+.detail-cell { padding: 10px 16px !important; background: #fafaf8 !important; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
+.detail-item { font-size: 12px; padding: 4px 6px; border-radius: 6px; }
+.detail-nok { background: #FCEBEB; color: #A32D2D; }
+.detail-ok { background: #EAF3DE; color: #3B6D11; }
+.detail-na { background: #FEFAE8; color: #7B6200; }
+.note-text { font-size: 11px; color: #666; margin-top: 2px; }
+.findings-block { margin-top: 10px; font-size: 12px; background: #fff; border: 1px solid #e0e0dc; border-radius: 8px; padding: 8px 12px; }
+.findings-label { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 3px; }
+.findings-text { color: #333; line-height: 1.5; }
+
+.empty-state { text-align: center; padding: 40px 20px; color: #888; }
+.empty-state p { font-size: 14px; }
+
+.action-btn { background: none; border: 1px solid #ddd; border-radius: 6px; padding: 3px 9px; font-size: 11px; cursor: pointer; font-family: Arial, sans-serif; transition: all 0.15s; }
+.edit-btn { color: #185FA5; border-color: #85B7EB; }
+.edit-btn:hover { background: #E6F1FB; }
+.delete-btn { color: #A32D2D; border-color: #F09595; }
+.delete-btn:hover { background: #FCEBEB; }
+
+.modal-overlay { display: none; position: fixed; top: 0; right: 0; left: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 1000; overflow-y: auto; padding: 30px 16px; }
+.modal-overlay.open { display: block; }
+.modal { background: #fff; border-radius: 14px; width: 100%; max-width: 700px; margin: 0 auto; padding: 22px; }
+.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.modal-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+.modal-field label { display: block; font-size: 11px; color: #666; margin-bottom: 3px; font-weight: 600; }
+.modal-field input, .modal-field textarea { width: 100%; padding: 7px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: Arial, sans-serif; }
+.modal-field textarea { resize: vertical; min-height: 50px; }
+.modal-field input:focus, .modal-field textarea:focus { outline: none; border-color: #888; }
+.modal-section-hdr { font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 0 5px; border-bottom: 1px solid #e0e0dc; margin-bottom: 6px; margin-top: 10px; }
+.modal-item { display: flex; align-items: flex-start; gap: 8px; padding: 5px 6px; border-radius: 7px; margin-bottom: 3px; background: #fafaf8; }
+.modal-item-text { flex: 1; font-size: 12px; line-height: 1.5; padding-top: 3px; }
+.modal-radio-group { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+.modal-radio { font-size: 11px; padding: 2px 9px; border-radius: 99px; border: 1px solid #ccc; cursor: pointer; background: transparent; color: #666; font-family: Arial, sans-serif; min-width: 58px; text-align: center; }
+.modal-radio:hover { background: #f0f0ee; }
+.modal-radio.ok { background: #EAF3DE; color: #3B6D11; border-color: #97C459; font-weight: 600; }
+.modal-radio.nok { background: #FCEBEB; color: #A32D2D; border-color: #F09595; font-weight: 600; }
+.modal-radio.na { background: #FEFAE8; color: #7B6200; border-color: #D4B800; font-weight: 600; }
+.modal-note { width: 100%; margin-top: 3px; font-size: 11px; border: 1px solid #e0e0dc; border-radius: 6px; padding: 3px 7px; font-family: Arial, sans-serif; background: #fff; resize: none; min-height: 26px; }
+.modal-note:focus { outline: none; border-color: #aaa; }
+.modal-footer { display: flex; gap: 10px; margin-top: 18px; }
+.modal-save { padding: 9px 22px; background: #185FA5; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: Arial, sans-serif; }
+.modal-save:hover { background: #0C447C; }
+.modal-cancel { padding: 9px 18px; background: #f5f5f3; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; cursor: pointer; font-family: Arial, sans-serif; color: #555; }
+.modal-cancel:hover { background: #eee; }
+.modal-msg { font-size: 13px; padding: 7px 12px; border-radius: 7px; display: none; margin-top: 8px; }
+.modal-msg.success { background: #EAF3DE; color: #3B6D11; display: block; }
+.modal-msg.error { background: #FCEBEB; color: #A32D2D; display: block; }
+
+@media (max-width: 650px) {
+  .charts-row, .tables-row { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .modal-meta { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div>
+      <h1>דשבורד מנהל — מכרז פריפריה</h1>
+      <div class="topbar-sub">משרד ההתיישבות והמשימות הלאומיות</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="last-update" id="last-update"></span>
+    <button class="refresh-btn" onclick="loadData()">רענן נתונים ↻</button>
+    <a class="home-btn" href="index.html">← ראשי</a>
+  </div>
+</div>
+
+<div class="page">
+  <div id="loading" class="loading">
+    <div class="loading-spinner"></div>
+    <p>טוען נתונים מ-Google Sheets...</p>
+  </div>
+  <div id="error-area"></div>
+  <div id="dashboard" style="display:none;"></div>
+</div>
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">עריכת בקרה — מכרז פריפריה</div>
+    <div class="modal-meta">
+      <div class="modal-field"><label>תאריך</label><input type="date" id="m-date"></div>
+      <div class="modal-field"><label>שם בקר</label><input type="text" id="m-inspector"></div>
+      <div class="modal-field"><label>עיר / יישוב</label><input type="text" id="m-city"></div>
+      <div class="modal-field"><label>שם סניף</label><input type="text" id="m-branch"></div>
+    </div>
+    <div id="m-items-container"></div>
+    <div style="margin-top:12px;">
+      <div class="modal-section-hdr">סיכום הביקורת</div>
+      <div style="margin-bottom:7px;"><div class="modal-field"><label>ממצאים עיקריים</label><textarea id="m-findings"></textarea></div></div>
+      <div style="margin-bottom:7px;"><div class="modal-field"><label>פריטים שאינם עומדים</label><textarea id="m-non-compliant"></textarea></div></div>
+      <div><div class="modal-field"><label>המלצות לתיקון</label><textarea id="m-recommendations"></textarea></div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-save" onclick="saveEdit()">שמור שינויים</button>
+      <button class="modal-cancel" onclick="closeModal()">ביטול</button>
+    </div>
+    <div class="modal-msg" id="modal-msg"></div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYdcDqUglwWSe1lKKZYlHiJOxK8dOCJ9-wFAzy5bd9HTjHEp9D_RG_tw_qVn-2yukF/exec";
+const FORM_TYPE = "periphery";
+
+const ITEM_LABELS = {
+  p1i1:"תדירות מפגשים – פעמיים בשבוע (א'–ה')",
+  p1i2:"שעות פעילות – אחה\"צ (בקיץ: ניתן בוקר)",
+  p1i3:"משך כל פעילות – לפחות 45 דקות",
+  p2i1:"גיל משתתפים – 15–25 בלבד",
+  p3i1:"אפיון גיאוגרפי – פריפריה (נספח ג')",
+  p3i2:"תמהיל אוכלוסייה – 50%+ לא חרדי/דתל\"א",
+  p3i3:"קרבה למוסד חינוכי – 250+ בני נוער",
+  p3i4:"כמות מרכזים – עד 3 בעיר; 1 בשכונה",
+  p3i5:"ללא כפילות ממשרד ממשלתי אחר",
+  p4i1:"גבייה מהמשתתפים – אסורה לחלוטין",
+  p5i1:"אישור זהות הצוות ע\"פ ההצעה הזוכה",
+  p5i2:"נוכחות רכז מקומי – אחראי שוטף",
+  p5i3:"ללא קבלן משנה חיצוני",
+  p6i1:"תוכן חווייתי – זהות יהודית, סדנאות, גיבוש",
+  p6i2:"מפגשי העצמה למשתתפים",
+  p7i1:"רישום ותיעוד שוטף – דוח חודשי",
+  p7i2:"בקרת איכות פנימית – הכשרת צוות",
+  p7i3:"שיתוף פעולה מלא עם הבקרה"
+};
+
+const CRITICAL = ["p1i1","p1i3","p2i1","p3i1","p4i1","p5i2","p7i1","p7i3"];
+const ALL_IDS = Object.keys(ITEM_LABELS);
+
+const SECTIONS_META = [
+  { title: "זמני ושעות הפעילות", ids: ["p1i1","p1i2","p1i3"] },
+  { title: "אוכלוסיית היעד", ids: ["p2i1"] },
+  { title: "מיקום ותנאי הסביבה", ids: ["p3i1","p3i2","p3i3","p3i4","p3i5"] },
+  { title: "איסור גבייה", ids: ["p4i1"] },
+  { title: "צוות הדרכה", ids: ["p5i1","p5i2","p5i3"] },
+  { title: "אופי הפעילות", ids: ["p6i1","p6i2"] },
+  { title: "תיעוד ובקרה", ids: ["p7i1","p7i2","p7i3"] },
+];
+
+let allRows = [];
+let filteredRows = [];
+let charts = {};
+
+function loadData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('error-area').innerHTML = '';
+
+  fetch(SCRIPT_URL + "?sheet=periphery&t=" + Date.now())
+    .then(r => r.json())
+    .then(data => {
+      allRows = data.rows || [];
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('last-update').textContent = 'עודכן: ' + new Date().toLocaleTimeString('he-IL');
+      buildDashboard();
+    })
+    .catch(err => {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error-area').innerHTML =
+        '<div class="error-box">שגיאה בטעינת הנתונים. בדוק שה-Apps Script עודכן ופורסם מחדש.<br><small>' + err.message + '</small></div>';
+    });
+}
+
+function buildDashboard() {
+  populateFilters();
+  applyFilters();
+}
+
+function populateFilters() {
+  const inspectors = [...new Set(allRows.map(r => r['שם בקר']).filter(Boolean))].sort();
+  const cities = [...new Set(allRows.map(r => r['עיר/יישוב']).filter(Boolean))].sort();
+  const branches = [...new Set(allRows.map(r => r['שם סניף']).filter(Boolean))].sort();
+
+  const dash = document.getElementById('dashboard');
+  dash.style.display = 'block';
+
+  if (!document.getElementById('filter-bar')) {
+    dash.innerHTML = buildFiltersHTML(inspectors, cities, branches) + '<div id="content-area"></div>';
+  } else {
+    const fi = document.getElementById('f-inspector'), fc = document.getElementById('f-city'), fb = document.getElementById('f-branch');
+    const ci = fi.value, cc = fc.value, cb = fb.value;
+    fi.innerHTML = '<option value="">כל הבקרים</option>' + inspectors.map(i => '<option value="'+i+'"'+(i===ci?' selected':'')+'>'+i+'</option>').join('');
+    fc.innerHTML = '<option value="">כל הערים</option>' + cities.map(c => '<option value="'+c+'"'+(c===cc?' selected':'')+'>'+c+'</option>').join('');
+    fb.innerHTML = '<option value="">כל הסניפים</option>' + branches.map(b => '<option value="'+b+'"'+(b===cb?' selected':'')+'>'+b+'</option>').join('');
+  }
+}
+
+function buildFiltersHTML(inspectors, cities, branches) {
+  return '<div id="filter-bar" class="filters">' +
+    '<div class="filter-group"><label>בקר</label>' +
+    '<select id="f-inspector" onchange="applyFilters()"><option value="">כל הבקרים</option>' +
+    inspectors.map(i => '<option value="'+i+'">'+i+'</option>').join('') + '</select></div>' +
+    '<div class="filter-group"><label>עיר / יישוב</label>' +
+    '<select id="f-city" onchange="applyFilters()"><option value="">כל הערים</option>' +
+    cities.map(c => '<option value="'+c+'">'+c+'</option>').join('') + '</select></div>' +
+    '<div class="filter-group"><label>סניף</label>' +
+    '<select id="f-branch" onchange="applyFilters()"><option value="">כל הסניפים</option>' +
+    branches.map(b => '<option value="'+b+'">'+b+'</option>').join('') + '</select></div>' +
+    '<div class="filter-group"><label>מתאריך</label><input type="date" id="f-from" onchange="applyFilters()"></div>' +
+    '<div class="filter-group"><label>עד תאריך</label><input type="date" id="f-to" onchange="applyFilters()"></div>' +
+    '<button class="clear-btn" onclick="clearFilters()">נקה סינון</button>' +
+    '</div>';
+}
+
+function clearFilters() {
+  ['f-inspector','f-city','f-branch','f-from','f-to'].forEach(id => { document.getElementById(id).value = ''; });
+  applyFilters();
+}
+
+function applyFilters() {
+  const ins = (document.getElementById('f-inspector') || {}).value || '';
+  const city = (document.getElementById('f-city') || {}).value || '';
+  const br = (document.getElementById('f-branch') || {}).value || '';
+  const from = (document.getElementById('f-from') || {}).value || '';
+  const to = (document.getElementById('f-to') || {}).value || '';
+
+  filteredRows = allRows.filter(r => {
+    if (ins && r['שם בקר'] !== ins) return false;
+    if (city && r['עיר/יישוב'] !== city) return false;
+    if (br && r['שם סניף'] !== br) return false;
+    if (from || to) {
+      const d = new Date(r['תאריך']);
+      if (from && d < new Date(from)) return false;
+      if (to && d > new Date(to + 'T23:59:59')) return false;
+    }
+    return true;
+  });
+  renderContent();
+}
+
+function renderContent() {
+  const area = document.getElementById('content-area');
+  if (!filteredRows.length) {
+    area.innerHTML = '<div class="empty-state"><p>אין בקרות התואמות את הסינון הנוכחי</p></div>';
+    return;
+  }
+  area.innerHTML =
+    renderStats() +
+    '<div class="charts-row">' + renderTrendChartHTML() + renderInspectorChartHTML() + '</div>' +
+    renderFailList() +
+    '<div class="tables-row">' + renderInspectorTable() + renderCityTable() + '</div>' +
+    renderAllTable();
+  drawTrendChart();
+  drawInspectorChart();
+}
+
+function getStats() {
+  let yes = 0, no = 0, na = 0, critFails = 0;
+  filteredRows.forEach(r => {
+    ALL_IDS.forEach(id => {
+      if (r[id] === 'yes') yes++;
+      else if (r[id] === 'no') { no++; if (CRITICAL.includes(id)) critFails++; }
+      else if (r[id] === 'na') na++;
+    });
+  });
+  const answeredForCompliance = yes + no;
+  const compliancePct = answeredForCompliance ? Math.round(yes / answeredForCompliance * 100) : 0;
+  return { total: filteredRows.length, yes, no, na, compliancePct, critFails };
+}
+
+function renderStats() {
+  const s = getStats();
+  return '<div class="stats-grid">' +
+    statCard('סה״כ בקרות', s.total, '', 'stat-blue') +
+    statCard('אחוז עמידה', s.compliancePct + '%', 'מתוך הסעיפים שנבדקו', 'stat-green') +
+    statCard('סעיפים שאינם עומדים', s.no, 'פריטי "לא"', 'stat-red') +
+    statCard('כשלים בסעיפי חובה', s.critFails, 'דורשים טיפול מיידי', 'stat-amber') +
+    '</div>';
+}
+
+function statCard(label, num, sub, cls) {
+  return '<div class="stat-card ' + cls + '"><div class="stat-label">' + label + '</div>' +
+    '<div class="stat-num">' + num + '</div>' +
+    (sub ? '<div class="stat-sub">' + sub + '</div>' : '') + '</div>';
+}
+
+function renderTrendChartHTML() {
+  return '<div class="chart-card"><div class="chart-title">מגמת בקרות לאורך זמן</div>' +
+    '<div class="chart-wrap" style="height:200px;"><canvas id="chart-trend"></canvas></div></div>';
+}
+
+function renderInspectorChartHTML() {
+  return '<div class="chart-card"><div class="chart-title">אחוז עמידה לפי בקר</div>' +
+    '<div class="chart-wrap" style="height:200px;"><canvas id="chart-inspector"></canvas></div></div>';
+}
+
+function drawTrendChart() {
+  const byMonth = {};
+  filteredRows.forEach(r => {
+    const d = new Date(r['תאריך']);
+    if (isNaN(d)) return;
+    const key = d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0');
+    byMonth[key] = (byMonth[key] || 0) + 1;
+  });
+  const labels = Object.keys(byMonth).sort();
+  const vals = labels.map(k => byMonth[k]);
+  if (charts['trend']) charts['trend'].destroy();
+  const ctx = document.getElementById('chart-trend');
+  if (!ctx) return;
+  charts['trend'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'בקרות', data: vals, backgroundColor: '#378ADD', borderRadius: 5 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { family: 'Arial', size: 11 } } },
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Arial', size: 11 } } }
+      }
+    }
+  });
+}
+
+function drawInspectorChart() {
+  const byIns = {};
+  filteredRows.forEach(r => {
+    const name = r['שם בקר'] || 'לא ידוע';
+    if (!byIns[name]) byIns[name] = { yes: 0, no: 0 };
+    ALL_IDS.forEach(id => {
+      if (r[id] === 'yes') byIns[name].yes++;
+      else if (r[id] === 'no') byIns[name].no++;
+    });
+  });
+  const labels = Object.keys(byIns);
+  const vals = labels.map(k => {
+    const t = byIns[k].yes + byIns[k].no;
+    return t ? Math.round(byIns[k].yes / t * 100) : 0;
+  });
+  const colors = vals.map(v => v >= 80 ? '#639922' : v >= 60 ? '#EF9F27' : '#E24B4A');
+  if (charts['inspector']) charts['inspector'].destroy();
+  const ctx = document.getElementById('chart-inspector');
+  if (!ctx) return;
+  charts['inspector'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: '% עמידה', data: vals, backgroundColor: colors, borderRadius: 5 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', font: { family: 'Arial', size: 11 } } },
+        y: { ticks: { font: { family: 'Arial', size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderFailList() {
+  const counts = {};
+  ALL_IDS.forEach(id => { counts[id] = 0; });
+  filteredRows.forEach(r => { ALL_IDS.forEach(id => { if (r[id] === 'no') counts[id]++; }); });
+  const total = filteredRows.length;
+  const sorted = ALL_IDS.map(id => ({ id, count: counts[id], pct: total ? Math.round(counts[id]/total*100) : 0 }))
+    .filter(x => x.count > 0).sort((a,b) => b.count - a.count).slice(0, 10);
+
+  if (!sorted.length) return '<div class="fail-section"><div class="section-title">סעיפים עם הכי הרבה אי-עמידה</div><div class="empty-state"><p>אין כשלים — מצוין!</p></div></div>';
+  return '<div class="fail-section"><div class="section-title">סעיפים עם הכי הרבה אי-עמידה (עד 10)</div>' +
+    sorted.map(x =>
+      '<div class="fail-item">' +
+      '<div class="fail-label">' + (CRITICAL.includes(x.id) ? '<strong>⚑ </strong>' : '') + ITEM_LABELS[x.id] + '</div>' +
+      '<div class="fail-bar-wrap"><div class="fail-bar" style="width:' + x.pct + '%"></div></div>' +
+      '<div class="fail-pct">' + x.pct + '%</div>' +
+      '<div class="fail-count">' + x.count + ' מתוך ' + total + '</div>' +
+      '</div>'
+    ).join('') + '</div>';
+}
+
+function renderInspectorTable() {
+  const byIns = {};
+  filteredRows.forEach(r => {
+    const name = r['שם בקר'] || 'לא ידוע';
+    if (!byIns[name]) byIns[name] = { count: 0, yes: 0, no: 0 };
+    byIns[name].count++;
+    ALL_IDS.forEach(id => {
+      if (r[id] === 'yes') byIns[name].yes++;
+      else if (r[id] === 'no') byIns[name].no++;
+    });
+  });
+  const rows = Object.entries(byIns).sort((a,b) => b[1].count - a[1].count);
+  return '<div class="table-card"><div class="section-title">ביצועים לפי בקר</div>' +
+    '<table class="perf-table"><thead><tr><th>בקר</th><th>בקרות</th><th>% עמידה</th></tr></thead><tbody>' +
+    rows.map(([name, d]) => {
+      const t = d.yes + d.no;
+      const pct = t ? Math.round(d.yes / t * 100) : 0;
+      return '<tr><td>' + name + '</td><td>' + d.count + '</td>' +
+        '<td><span class="' + (pct >= 80 ? 'badge-ok' : 'badge-nok') + '">' + pct + '%</span>' +
+        '<div class="mini-bar-wrap"><div class="mini-bar-ok" style="width:' + pct + '%"></div></div></td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+function renderCityTable() {
+  const byCity = {};
+  filteredRows.forEach(r => {
+    const name = (r['עיר/יישוב'] || 'לא ידוע') + (r['שם סניף'] ? ' — ' + r['שם סניף'] : '');
+    if (!byCity[name]) byCity[name] = { count: 0, yes: 0, no: 0 };
+    byCity[name].count++;
+    ALL_IDS.forEach(id => {
+      if (r[id] === 'yes') byCity[name].yes++;
+      else if (r[id] === 'no') byCity[name].no++;
+    });
+  });
+  const rows = Object.entries(byCity).sort((a,b) => b[1].count - a[1].count);
+  return '<div class="table-card"><div class="section-title">ביצועים לפי עיר / סניף</div>' +
+    '<table class="perf-table"><thead><tr><th>עיר / סניף</th><th>בקרות</th><th>% עמידה</th></tr></thead><tbody>' +
+    rows.map(([name, d]) => {
+      const t = d.yes + d.no;
+      const pct = t ? Math.round(d.yes / t * 100) : 0;
+      return '<tr><td>' + name + '</td><td>' + d.count + '</td>' +
+        '<td><span class="' + (pct >= 80 ? 'badge-ok' : 'badge-nok') + '">' + pct + '%</span>' +
+        '<div class="mini-bar-wrap"><div class="mini-bar-ok" style="width:' + pct + '%"></div></div></td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+let sortedWithIndex = [];
+
+function renderAllTable() {
+  sortedWithIndex = filteredRows
+    .map(r => ({ r, origIndex: allRows.indexOf(r) }))
+    .sort((a,b) => new Date(b.r['תאריך']) - new Date(a.r['תאריך']));
+
+  return '<div class="all-table-card"><div class="section-title">כל הבקרות (' + sortedWithIndex.length + ')</div>' +
+    '<div class="table-scroll"><table class="all-table"><thead><tr>' +
+    '<th>תאריך</th><th>בקר</th><th>עיר/יישוב</th><th>סניף</th><th>כן</th><th>לא</th><th>פעולות</th>' +
+    '</tr></thead><tbody>' +
+    sortedWithIndex.map(({ r, origIndex }, i) => {
+      const yes = ALL_IDS.filter(id => r[id] === 'yes').length;
+      const no = ALL_IDS.filter(id => r[id] === 'no').length;
+      const d = new Date(r['תאריך']);
+      const dateStr = isNaN(d) ? r['תאריך'] : d.toLocaleDateString('he-IL');
+      return '<tr>' +
+        '<td>' + dateStr + '</td>' +
+        '<td>' + (r['שם בקר'] || '') + '</td>' +
+        '<td>' + (r['עיר/יישוב'] || '') + '</td>' +
+        '<td>' + (r['שם סניף'] || '') + '</td>' +
+        '<td><span class="badge-ok">' + yes + '</span></td>' +
+        '<td>' + (no > 0 ? '<span class="badge-nok">' + no + '</span>' : '<span style="color:#aaa">0</span>') + '</td>' +
+        '<td style="white-space:nowrap;">' +
+          '<button class="expand-btn" onclick="toggleDetail(this,' + i + ')" style="margin-left:6px;">פירוט ▾</button>' +
+          '<button class="action-btn edit-btn" onclick="openEdit(' + origIndex + ')">עריכה</button> ' +
+          '<button class="action-btn delete-btn" onclick="confirmDelete(' + origIndex + ')">מחיקה</button>' +
+        '</td>' +
+        '</tr>' +
+        '<tr id="detail-' + i + '" class="detail-row"><td class="detail-cell" colspan="7">' +
+        buildDetailGrid(r) + '</td></tr>';
+    }).join('') +
+    '</tbody></table></div></div>';
+}
+
+function buildDetailGrid(r) {
+  const nokIds = ALL_IDS.filter(id => r[id] === 'no');
+  const notes = ALL_IDS.filter(id => r['הערות_' + id] && r['הערות_' + id].toString().trim());
+
+  let html = '<div style="margin-bottom:8px;">';
+  if (!nokIds.length) {
+    html += '<span style="color:#3B6D11;font-size:13px;font-weight:600;">✓ כל הסעיפים עומדים בדרישות</span>';
+  } else {
+    html += '<div style="font-size:12px;font-weight:600;color:#A32D2D;margin-bottom:6px;">סעיפים שאינם עומדים בדרישות:</div>';
+    html += '<div class="detail-grid">';
+    nokIds.forEach(id => {
+      const note = (r['הערות_' + id] || '').toString().trim();
+      html += '<div class="detail-item detail-nok">' +
+        (CRITICAL.includes(id) ? '⚑ ' : '') + ITEM_LABELS[id] +
+        (note ? '<div class="note-text">הערה: ' + note + '</div>' : '') + '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  if (notes.length) {
+    html += '<div style="font-size:12px;font-weight:600;color:#185FA5;margin-bottom:6px;margin-top:8px;">הערות נוספות:</div>';
+    html += '<div class="detail-grid">';
+    notes.forEach(id => {
+      if (r[id] !== 'no') {
+        const cls = r[id] === 'yes' ? 'detail-ok' : 'detail-na';
+        html += '<div class="detail-item ' + cls + '">' + ITEM_LABELS[id] +
+          '<div class="note-text">' + r['הערות_' + id] + '</div></div>';
+      }
+    });
+    html += '</div>';
+  }
+
+  const findings = (r['ממצאים עיקריים'] || '').toString().trim();
+  const nonCompliant = (r['פריטים שאינם עומדים'] || '').toString().trim();
+  const recs = (r['המלצות לתיקון'] || '').toString().trim();
+
+  if (findings || nonCompliant || recs) {
+    if (findings) html += '<div class="findings-block"><div class="findings-label">ממצאים עיקריים:</div><div class="findings-text">' + findings + '</div></div>';
+    if (nonCompliant) html += '<div class="findings-block"><div class="findings-label">פריטים שאינם עומדים:</div><div class="findings-text">' + nonCompliant + '</div></div>';
+    if (recs) html += '<div class="findings-block"><div class="findings-label">המלצות לתיקון:</div><div class="findings-text">' + recs + '</div></div>';
+  }
+
+  return html;
+}
+
+function toggleDetail(btn, i) {
+  const row = document.getElementById('detail-' + i);
+  const isOpen = row.classList.contains('open');
+  row.classList.toggle('open');
+  btn.textContent = isOpen ? 'פירוט ▾' : 'סגור ▴';
+}
+
+// ===== עריכה =====
+let editingIndex = null;
+let editState = {};
+
+function openEdit(origIndex) {
+  editingIndex = origIndex;
+  const r = allRows[origIndex];
+  editState = {};
+  ALL_IDS.forEach(id => {
+    editState[id] = { status: r[id] || null, note: (r['הערות_' + id] || '').toString().trim() };
+  });
+  const d = new Date(r['תאריך']);
+  document.getElementById('m-date').value = isNaN(d) ? '' : d.toISOString().split('T')[0];
+  document.getElementById('m-inspector').value = r['שם בקר'] || '';
+  document.getElementById('m-city').value = r['עיר/יישוב'] || '';
+  document.getElementById('m-branch').value = r['שם סניף'] || '';
+  document.getElementById('m-findings').value = r['ממצאים עיקריים'] || '';
+  document.getElementById('m-non-compliant').value = r['פריטים שאינם עומדים'] || '';
+  document.getElementById('m-recommendations').value = r['המלצות לתיקון'] || '';
+
+  const cont = document.getElementById('m-items-container');
+  let html = '';
+  SECTIONS_META.forEach(sec => {
+    html += '<div class="modal-section-hdr">' + sec.title + '</div>';
+    sec.ids.forEach(id => {
+      const s = editState[id];
+      const crit = CRITICAL.includes(id) ? '<span style="font-size:10px;padding:1px 5px;border-radius:99px;background:#FCEBEB;color:#A32D2D;border:1px solid #F09595;margin-left:4px;">חובה</span>' : '';
+      html += '<div class="modal-item" id="mitem-' + id + '">' +
+        '<div class="modal-item-text">' + crit + ITEM_LABELS[id] + '</div>' +
+        '<div class="modal-radio-group">' +
+          '<button class="modal-radio' + (s.status === 'yes' ? ' ok' : '') + '" onclick="setEditStatus(\'' + id + '\',\'yes\')">✓ כן</button>' +
+          '<button class="modal-radio' + (s.status === 'no' ? ' nok' : '') + '" onclick="setEditStatus(\'' + id + '\',\'no\')">✗ לא</button>' +
+          '<button class="modal-radio' + (s.status === 'na' ? ' na' : '') + '" onclick="setEditStatus(\'' + id + '\',\'na\')">נ/ר</button>' +
+        '</div>' +
+        '</div>' +
+        '<textarea class="modal-note" id="mnote-' + id + '" placeholder="הערה..." rows="1" oninput="editState[\'' + id + '\'].note=this.value">' + (s.note || '') + '</textarea>';
+    });
+  });
+  cont.innerHTML = html;
+  document.getElementById('modal-msg').className = 'modal-msg';
+  document.getElementById('modal-msg').textContent = '';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function setEditStatus(id, val) {
+  editState[id].status = (editState[id].status === val) ? null : val;
+  const btns = document.getElementById('mitem-' + id).querySelectorAll('.modal-radio');
+  const s = editState[id].status;
+  btns[0].className = 'modal-radio' + (s === 'yes' ? ' ok' : '');
+  btns[1].className = 'modal-radio' + (s === 'no' ? ' nok' : '');
+  btns[2].className = 'modal-radio' + (s === 'na' ? ' na' : '');
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+  editingIndex = null;
+}
+
+function saveEdit() {
+  const payload = {
+    formType: FORM_TYPE, action: 'update', rowIndex: editingIndex,
+    visitDate: document.getElementById('m-date').value,
+    inspector: document.getElementById('m-inspector').value.trim(),
+    city: document.getElementById('m-city').value.trim(),
+    branch: document.getElementById('m-branch').value.trim(),
+    findings: document.getElementById('m-findings').value.trim(),
+    nonCompliant: document.getElementById('m-non-compliant').value.trim(),
+    recommendations: document.getElementById('m-recommendations').value.trim()
+  };
+  ALL_IDS.forEach(id => { payload[id] = { status: editState[id].status || '', note: editState[id].note || '' }; });
+
+  const btn = document.querySelector('.modal-save');
+  btn.disabled = true; btn.textContent = 'שומר...';
+
+  fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+    .then(() => {
+      const r = allRows[editingIndex];
+      r['תאריך'] = payload.visitDate; r['שם בקר'] = payload.inspector;
+      r['עיר/יישוב'] = payload.city; r['שם סניף'] = payload.branch;
+      r['ממצאים עיקריים'] = payload.findings; r['פריטים שאינם עומדים'] = payload.nonCompliant; r['המלצות לתיקון'] = payload.recommendations;
+      ALL_IDS.forEach(id => { r[id] = editState[id].status || ''; r['הערות_' + id] = editState[id].note || ''; });
+      const msg = document.getElementById('modal-msg');
+      msg.textContent = 'נשמר בהצלחה ✓'; msg.className = 'modal-msg success';
+      btn.disabled = false; btn.textContent = 'שמור שינויים';
+      setTimeout(() => { closeModal(); applyFilters(); }, 1200);
+    })
+    .catch(() => {
+      const msg = document.getElementById('modal-msg');
+      msg.textContent = 'שגיאה בשמירה — נסה שוב'; msg.className = 'modal-msg error';
+      btn.disabled = false; btn.textContent = 'שמור שינויים';
+    });
+}
+
+function confirmDelete(origIndex) {
+  const r = allRows[origIndex];
+  const d = new Date(r['תאריך']);
+  const dateStr = isNaN(d) ? r['תאריך'] : d.toLocaleDateString('he-IL');
+  if (!confirm('למחוק את הבקרה של ' + (r['שם בקר'] || '?') + ' מיום ' + dateStr + ' בסניף ' + (r['שם סניף'] || '') + '?')) return;
+  fetch(SCRIPT_URL, {
+    method: 'POST', mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ formType: FORM_TYPE, action: 'delete', rowIndex: origIndex })
+  })
+  .then(() => { allRows.splice(origIndex, 1); applyFilters(); })
+  .catch(() => alert('שגיאה במחיקה — נסה שוב'));
+}
+
+loadData();
+</script>
+</body>
+</html>

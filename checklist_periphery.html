@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>בקרת שטח — מכרז פריפריה</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f5f5f3; color: #1a1a1a; direction: rtl; font-size: 15px; }
+  .page { max-width: 780px; margin: 0 auto; padding: 16px; }
+
+  .header { background: #fff; border-radius: 12px; border: 1px solid #e0e0dc; padding: 18px 20px; margin-bottom: 16px; }
+  .header h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .header p { font-size: 13px; color: #666; }
+  .header-meta { font-size: 12px; color: #888; margin-top: 6px; }
+  .back-link { font-size: 12px; color: #185FA5; text-decoration: none; display: inline-block; margin-bottom: 10px; }
+  .back-link:hover { text-decoration: underline; }
+
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .meta-field label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; font-weight: 500; }
+  .meta-field input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: Arial, sans-serif; background: #fff; }
+  .meta-field input:focus { outline: none; border-color: #888; }
+
+  .legend-box { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 10px 16px; margin-bottom: 16px; font-size: 12px; color: #555; display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+  .legend-box strong { margin-left: 4px; }
+
+  .progress-wrap { background: #fff; border-radius: 10px; border: 1px solid #e0e0dc; padding: 12px 16px; margin-bottom: 16px; }
+  .progress-labels { display: flex; gap: 14px; font-size: 13px; margin-bottom: 6px; flex-wrap: wrap; }
+  .prog-ok { color: #3B6D11; font-weight: 500; }
+  .prog-nok { color: #A32D2D; font-weight: 500; }
+  .prog-na { color: #7B6200; font-weight: 500; }
+  .prog-neutral { color: #666; }
+  .prog-bar { background: #eee; border-radius: 99px; height: 6px; overflow: hidden; }
+  .prog-fill { height: 100%; background: #1D9E75; border-radius: 99px; transition: width 0.3s; width: 0%; }
+
+  .section { margin-bottom: 14px; }
+  .section-title { font-size: 12px; font-weight: 700; color: #555; letter-spacing: 0.03em; padding: 0 4px 6px; border-bottom: 1px solid #e0e0dc; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: baseline; }
+  .section-ref { font-size: 10px; color: #999; font-weight: 400; letter-spacing: 0; text-align: left; }
+
+  .item-card { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; }
+  .item-row { display: flex; align-items: flex-start; gap: 8px; }
+  .item-num { font-size: 11px; color: #aaa; font-weight: 700; flex-shrink: 0; padding-top: 4px; min-width: 22px; }
+  .item-text { flex: 1; }
+  .item-main { font-size: 13.5px; line-height: 1.55; }
+  .item-req { font-size: 11px; color: #888; margin-top: 2px; line-height: 1.4; }
+  .item-ref-badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 99px; background: #EEF3FC; color: #185FA5; border: 1px solid #B0C8F0; margin-right: 4px; white-space: nowrap; }
+  .tag-critical { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 99px; background: #FCEBEB; color: #A32D2D; border: 1px solid #F09595; margin-left: 5px; vertical-align: middle; font-weight: 600; }
+
+  .radio-group { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+  .radio-btn { font-size: 11px; padding: 4px 10px; border-radius: 99px; border: 1px solid #ccc; cursor: pointer; background: transparent; color: #666; transition: all 0.15s; white-space: nowrap; text-align: center; min-width: 62px; font-family: Arial, sans-serif; }
+  .radio-btn:hover { background: #f0f0ee; }
+  .radio-btn.ok { background: #EAF3DE; color: #3B6D11; border-color: #97C459; font-weight: 600; }
+  .radio-btn.nok { background: #FCEBEB; color: #A32D2D; border-color: #F09595; font-weight: 600; }
+  .radio-btn.na { background: #FEFAE8; color: #7B6200; border-color: #D4B800; font-weight: 600; }
+
+  .note-wrap { margin-top: 7px; }
+  .note-input { width: 100%; font-size: 12px; border: 1px solid #e0e0dc; border-radius: 8px; padding: 5px 8px; background: #fafaf8; color: #1a1a1a; font-family: Arial, sans-serif; resize: none; overflow: hidden; min-height: 30px; }
+  .note-input:focus { outline: none; border-color: #aaa; }
+  .note-input::placeholder { color: #aaa; }
+
+  .summary-fields { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .summary-fields h3 { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 12px; border-bottom: 1px solid #f0f0ee; padding-bottom: 8px; }
+  .sf-field { margin-bottom: 12px; }
+  .sf-field:last-child { margin-bottom: 0; }
+  .sf-field label { display: block; font-size: 12px; color: #555; margin-bottom: 5px; font-weight: 600; }
+  .sf-textarea { width: 100%; font-size: 13px; border: 1px solid #ddd; border-radius: 8px; padding: 8px 10px; font-family: Arial, sans-serif; resize: vertical; min-height: 64px; background: #fafaf8; }
+  .sf-textarea:focus { outline: none; border-color: #888; }
+  .sf-textarea::placeholder { color: #aaa; }
+
+  .submit-wrap { margin-top: 20px; margin-bottom: 30px; }
+  .submit-btn { width: 100%; padding: 14px; background: #185FA5; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: Arial, sans-serif; transition: background 0.15s; }
+  .submit-btn:hover { background: #0C447C; }
+  .submit-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+  .toast { display: none; padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-top: 12px; text-align: center; font-weight: 500; }
+  .toast.success { background: #EAF3DE; color: #3B6D11; border: 1px solid #97C459; }
+  .toast.error { background: #FCEBEB; color: #A32D2D; border: 1px solid #F09595; }
+
+  .summary-btn { width: 100%; padding: 11px; background: #f0f0ee; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: Arial, sans-serif; margin-bottom: 14px; color: #333; }
+  .summary-btn:hover { background: #e8e8e5; }
+  .summary-box { background: #fff; border: 1px solid #e0e0dc; border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+  .summary-stats { display: flex; border-bottom: 1px solid #e0e0dc; }
+  .stat { flex: 1; padding: 10px 8px; text-align: center; border-left: 1px solid #e0e0dc; }
+  .stat:last-child { border-left: none; }
+  .stat-num { font-size: 22px; font-weight: 700; }
+  .stat-label { font-size: 11px; color: #666; margin-top: 1px; }
+  .stat-ok .stat-num { color: #3B6D11; }
+  .stat-nok .stat-num { color: #A32D2D; }
+  .stat-na .stat-num { color: #7B6200; }
+  .stat-pend .stat-num { color: #666; }
+  .summary-section-header { padding: 9px 14px; font-size: 13px; font-weight: 700; border-bottom: 1px solid; }
+  .summary-nok-header { background: #FCEBEB; color: #A32D2D; border-color: #F09595; }
+  .summary-notes-header { background: #E6F1FB; color: #185FA5; border-color: #85B7EB; }
+  .summary-body { padding: 8px 14px; }
+  .summary-item { font-size: 13px; padding: 7px 0; border-bottom: 1px solid #f0f0ee; line-height: 1.5; }
+  .summary-item:last-child { border-bottom: none; }
+  .summary-section-label { font-size: 11px; color: #888; margin-bottom: 1px; }
+  .summary-note-label { font-size: 11px; color: #666; margin-top: 3px; }
+  .empty-msg { font-size: 13px; color: #888; padding: 8px 0; }
+
+  .history-btn { width: 100%; padding: 11px; background: #E6F1FB; border: 1px solid #85B7EB; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: Arial, sans-serif; margin-bottom: 14px; color: #185FA5; }
+  .history-btn:hover { background: #d0e6f7; }
+  .history-box-wrap { background: #fff; border: 1px solid #e0e0dc; border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+  .history-header { padding: 10px 14px; font-size: 13px; font-weight: 700; background: #E6F1FB; color: #185FA5; border-bottom: 1px solid #85B7EB; display: flex; justify-content: space-between; align-items: center; }
+  .history-loading { padding: 20px; text-align: center; color: #666; font-size: 13px; }
+  .history-item { padding: 10px 14px; border-bottom: 1px solid #f0f0ee; }
+  .history-item:last-child { border-bottom: none; }
+  .history-item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .history-item-info { font-size: 13px; color: #333; line-height: 1.5; }
+  .history-item-date { font-size: 11px; color: #888; }
+  .history-item-actions { display: flex; gap: 5px; flex-shrink: 0; }
+  .hist-edit-btn { font-size: 11px; padding: 3px 9px; border-radius: 6px; border: 1px solid #85B7EB; color: #185FA5; background: transparent; cursor: pointer; font-family: Arial, sans-serif; }
+  .hist-edit-btn:hover { background: #E6F1FB; }
+  .hist-del-btn { font-size: 11px; padding: 3px 9px; border-radius: 6px; border: 1px solid #F09595; color: #A32D2D; background: transparent; cursor: pointer; font-family: Arial, sans-serif; }
+  .hist-del-btn:hover { background: #FCEBEB; }
+  .history-stats { display: flex; gap: 10px; font-size: 12px; margin-top: 4px; }
+  .h-ok { color: #3B6D11; font-weight: 600; }
+  .h-nok { color: #A32D2D; font-weight: 600; }
+
+  .c-modal-overlay { display: none; position: fixed; top:0; right:0; left:0; bottom:0; background: rgba(0,0,0,0.45); z-index: 1000; overflow-y: auto; padding: 30px 16px; }
+  .c-modal-overlay.open { display: block; }
+  .c-modal { background: #fff; border-radius: 14px; width: 100%; max-width: 680px; margin: 0 auto; padding: 20px; }
+  .c-modal-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .c-modal-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .c-modal-field label { display: block; font-size: 11px; color: #666; margin-bottom: 3px; font-weight: 600; }
+  .c-modal-field input, .c-modal-field textarea { width: 100%; padding: 6px 9px; border: 1px solid #ddd; border-radius: 7px; font-size: 13px; font-family: Arial, sans-serif; }
+  .c-modal-field textarea { resize: vertical; min-height: 50px; }
+  .c-modal-field input:focus, .c-modal-field textarea:focus { outline: none; border-color: #888; }
+  .c-modal-sec { font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.04em; padding: 8px 0 5px; border-bottom: 1px solid #e0e0dc; margin-bottom: 5px; margin-top: 10px; }
+  .c-modal-item { display: flex; align-items: flex-start; gap: 8px; padding: 5px 6px; border-radius: 7px; margin-bottom: 3px; background: #fafaf8; }
+  .c-modal-item-text { flex: 1; font-size: 12px; line-height: 1.5; padding-top: 2px; }
+  .c-modal-radios { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+  .c-modal-radio { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid #ccc; cursor: pointer; background: transparent; color: #666; font-family: Arial, sans-serif; min-width: 58px; text-align: center; }
+  .c-modal-radio:hover { background: #f0f0ee; }
+  .c-modal-radio.ok { background: #EAF3DE; color: #3B6D11; border-color: #97C459; font-weight: 600; }
+  .c-modal-radio.nok { background: #FCEBEB; color: #A32D2D; border-color: #F09595; font-weight: 600; }
+  .c-modal-radio.na { background: #FEFAE8; color: #7B6200; border-color: #D4B800; font-weight: 600; }
+  .c-modal-note { width: 100%; margin-top: 3px; font-size: 11px; border: 1px solid #e0e0dc; border-radius: 6px; padding: 3px 7px; font-family: Arial, sans-serif; background: #fff; resize: none; min-height: 26px; }
+  .c-modal-note:focus { outline: none; border-color: #aaa; }
+  .c-modal-footer { display: flex; gap: 10px; margin-top: 16px; }
+  .c-modal-save { padding: 9px 20px; background: #185FA5; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: Arial, sans-serif; }
+  .c-modal-save:hover { background: #0C447C; }
+  .c-modal-cancel { padding: 9px 16px; background: #f5f5f3; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; cursor: pointer; font-family: Arial, sans-serif; color: #555; }
+  .c-modal-msg { font-size: 13px; padding: 7px 12px; border-radius: 7px; margin-top: 8px; display: none; }
+  .c-modal-msg.success { background: #EAF3DE; color: #3B6D11; display: block; }
+  .c-modal-msg.error { background: #FCEBEB; color: #A32D2D; display: block; }
+
+  @media (max-width: 500px) {
+    .meta-grid { grid-template-columns: 1fr; }
+    .radio-btn { min-width: 55px; padding: 4px 7px; }
+    .c-modal-meta { grid-template-columns: 1fr; }
+    .legend-box { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <a class="back-link" href="index.html">← חזרה לדף הבית</a>
+
+  <div class="header">
+    <h1>בקרת שטח — מכרז פריפריה</h1>
+    <p>מלא את כל הסעיפים ולחץ "שלח דוח" — הנתונים יישמרו אוטומטית ב-Google Sheets</p>
+    <div class="header-meta">משרד ההתיישבות והמשימות הלאומיות | שמידט בן צבי פרלשטיין רו"ח</div>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-field">
+      <label>שם הבקר</label>
+      <input type="text" id="inspector" placeholder="שם מלא..." />
+    </div>
+    <div class="meta-field">
+      <label>תאריך ביקורת</label>
+      <input type="date" id="visit-date" />
+    </div>
+    <div class="meta-field">
+      <label>עיר / יישוב</label>
+      <input type="text" id="city" placeholder="שם העיר או היישוב..." />
+    </div>
+    <div class="meta-field">
+      <label>שם הסניף / מרכז הפעילות</label>
+      <input type="text" id="branch" placeholder="שם המרכז..." />
+    </div>
+  </div>
+
+  <div class="legend-box">
+    <strong>מקרא:</strong>
+    <span><strong style="color:#3B6D11;">✓ כן</strong> = עומד בדרישה</span>
+    <span><strong style="color:#A32D2D;">✗ לא</strong> = אינו עומד בדרישה</span>
+    <span><strong style="color:#7B6200;">נ/ר</strong> = לא נבדק / לא רלוונטי</span>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-labels">
+      <span class="prog-neutral" id="lbl-total">0 מתוך 0 מולאו</span>
+      <span class="prog-ok" id="lbl-ok">✓ 0 כן</span>
+      <span class="prog-nok" id="lbl-nok">✗ 0 לא</span>
+      <span class="prog-na" id="lbl-na">◌ 0 נ/ר</span>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+  </div>
+
+  <div id="sections-container"></div>
+
+  <div class="summary-fields">
+    <h3>סיכום הביקורת</h3>
+    <div class="sf-field">
+      <label>ממצאים עיקריים</label>
+      <textarea class="sf-textarea" id="findings" placeholder="תאר את הממצאים העיקריים שנצפו בביקורת..."></textarea>
+    </div>
+    <div class="sf-field">
+      <label>פריטים שאינם עומדים בדרישות</label>
+      <textarea class="sf-textarea" id="non-compliant" placeholder="פרט אילו פריטים אינם עומדים בדרישות המכרז..."></textarea>
+    </div>
+    <div class="sf-field">
+      <label>המלצות לתיקון</label>
+      <textarea class="sf-textarea" id="recommendations" placeholder="הצע המלצות לתיקון הממצאים שנמצאו..."></textarea>
+    </div>
+  </div>
+
+  <button class="history-btn" onclick="loadHistory()">הבקרות שלי ↓</button>
+  <div id="history-box" style="display:none;"></div>
+
+  <button class="summary-btn" onclick="showSummary()">הצג ריכוז ממצאים ↓</button>
+  <div id="summary-box" style="display:none;"></div>
+
+  <div class="submit-wrap">
+    <button class="submit-btn" id="submit-btn" onclick="submitForm()">שלח דוח לגוגל שיטס ↗</button>
+    <div class="toast" id="toast"></div>
+  </div>
+
+</div>
+
+<div class="c-modal-overlay" id="c-edit-modal">
+  <div class="c-modal">
+    <div class="c-modal-title">עריכת בקרה — מכרז פריפריה</div>
+    <div class="c-modal-meta">
+      <div class="c-modal-field"><label>תאריך</label><input type="date" id="cm-date"></div>
+      <div class="c-modal-field"><label>שם בקר</label><input type="text" id="cm-inspector"></div>
+      <div class="c-modal-field"><label>עיר / יישוב</label><input type="text" id="cm-city"></div>
+      <div class="c-modal-field"><label>שם סניף</label><input type="text" id="cm-branch"></div>
+    </div>
+    <div id="cm-items-container"></div>
+    <div style="margin-top:12px;">
+      <div class="c-modal-sec">סיכום הביקורת</div>
+      <div style="margin-bottom:7px;"><div class="c-modal-field"><label>ממצאים עיקריים</label><textarea id="cm-findings"></textarea></div></div>
+      <div style="margin-bottom:7px;"><div class="c-modal-field"><label>פריטים שאינם עומדים</label><textarea id="cm-non-compliant"></textarea></div></div>
+      <div><div class="c-modal-field"><label>המלצות לתיקון</label><textarea id="cm-recommendations"></textarea></div></div>
+    </div>
+    <div class="c-modal-footer">
+      <button class="c-modal-save" onclick="saveCEdit()">שמור שינויים</button>
+      <button class="c-modal-cancel" onclick="closeCModal()">ביטול</button>
+    </div>
+    <div class="c-modal-msg" id="cm-msg"></div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYdcDqUglwWSe1lKKZYlHiJOxK8dOCJ9-wFAzy5bd9HTjHEp9D_RG_tw_qVn-2yukF/exec";
+const FORM_TYPE = "periphery";
+
+const SECTIONS = [
+  { title: "זמני ושעות הפעילות", ref: "פרק ב' ס' 4", items: [
+    { id:"p1i1", num:1, text:"תדירות מפגשים — לפחות פעמיים בשבוע (א'–ה')", req:"מינימום 2 פגישות שבועיות בימים א'–ה'", ref:"פרק ב' ס' 4", critical:true },
+    { id:"p1i2", num:2, text:"שעות הפעילות — אחה\"צ (בקיץ: ניתן גם בוקר)", req:"פעילות שוטפת בשעות אחר הצהריים", ref:"פרק ב' ס' 4" },
+    { id:"p1i3", num:3, text:"משך כל פעילות — לפחות 45 דקות", req:"כל יחידת פעילות ≥ 45 דקות", ref:"פרק ב' ס' 4", critical:true },
+  ]},
+  { title: "אוכלוסיית היעד והמשתתפים", ref: "פרק ב' ס' 5", items: [
+    { id:"p2i1", num:4, text:"גיל המשתתפים — בני נוער וצעירים בגילאי 15–25", req:"קהל היעד: גילאי 15–25 בלבד", ref:"פרק ב' ס' 5", critical:true },
+  ]},
+  { title: "מיקום ותנאי סביבת מוקד הפעילות", ref: "פרק א' ס' 6.3.2", items: [
+    { id:"p3i1", num:5, text:"אפיון גיאוגרפי/חברתי — פריפריה (לפי נספח ג')", req:"מוקד ממוקם באזור פריפריה גיאוגרפית ו/או חברתית", ref:"ס' 6.3.2.1", critical:true },
+    { id:"p3i2", num:6, text:"תמהיל אוכלוסייה — לפחות 50% אינם חרדים/דתי-לאומי", req:"≥ 50% מהאוכלוסייה אינה מגזר חרדי/דתי-לאומי", ref:"ס' 6.3.2.2" },
+    { id:"p3i3", num:7, text:"קרבה למוסד חינוכי — לפחות 250 בני נוער", req:"מוסד על-יסודי בשכונה/יישוב עם ≥ 250 בני נוער", ref:"ס' 6.3.2.3" },
+    { id:"p3i4", num:8, text:"כמות מרכזים — לכל היותר 3 בעיר/מועצה; 1 בשכונה", req:"מקסימום 3 מרכזים בעיר, 1 בשכונה", ref:"ס' 6.3.2.4" },
+    { id:"p3i5", num:9, text:"ללא כפילות — לא קיימת פעילות זהה ממשרד ממשלתי אחר", req:"אין פעילות זהה מקבילה מטעם משרד אחר", ref:"ס' 6.3.2.6" },
+  ]},
+  { title: "איסור מוחלט על גביית כספים", ref: "פרק א' ס' 2.4.8", items: [
+    { id:"p4i1", num:10, text:"גבייה מהמשתתפים — אסורה לחלוטין", req:"אפס גבייה. חריג: רק עם אישור כתוב מהמשרד מראש", ref:"פרק א' ס' 2.4.8", critical:true },
+  ]},
+  { title: "צוות הדרכה וכוח אדם", ref: "פרק ב' ס' 7.6, 7.7.3.1 | פרק א' ס' 2.4.7", items: [
+    { id:"p5i1", num:11, text:"אישור הצוות — זהות הצוות תואמת את ההצעה הזוכה", req:"כל שינוי מחייב אישור מראש ובכתב מהמשרד", ref:"פרק ב' ס' 7.6" },
+    { id:"p5i2", num:12, text:"נוכחות רכז מקומי — אחראי שוטף על המרכז", req:"רכז מקומי מזוהה, מאתר מדריכים ומפעיל אותם", ref:"פרק ב' ס' 7.7.3.1", critical:true },
+    { id:"p5i3", num:13, text:"קבלני משנה — פעילות ישירה, ללא קבלן משנה חיצוני", req:"הפעלה ישירה בלבד, אלא אם ניתן אישור כתוב", ref:"פרק א' ס' 2.4.7" },
+  ]},
+  { title: "אופי ומהות הפעילות", ref: "פרק א' ס' 2.4.2, 2.5.2.2", items: [
+    { id:"p6i1", num:14, text:"תוכן חווייתי — זהות יהודית, סדנאות, חוגים, גיבוש", req:"פעילות בשיטות: הרצאות, סדנאות, דינמיקה קבוצתית", ref:"פרק א' ס' 2.4.2" },
+    { id:"p6i2", num:15, text:"מפגשי העצמה למשתתפים — מתקיימים בפועל", req:"מפגשי העצמה כחלק מתכנית העבודה", ref:"פרק א' ס' 2.5.2.2" },
+  ]},
+  { title: "תיעוד, נהלים ובקרה", ref: "פרק ד'2 ס' 12.1 | פרק א' ס' 2.5.3 | פרק ה' ס' 6.1–6.2", items: [
+    { id:"p7i1", num:16, text:"רישום ותיעוד שוטף — פנקסי משתתפים ופעילויות", req:"דוח חודשי: מועדים, כמות משתתפים, משך, תוכן", ref:"פרק ד'2 ס' 12.1", critical:true },
+    { id:"p7i2", num:17, text:"בקרת איכות פנימית — הפקת לקחים, הכשרת צוות", req:"מנגנון פנימי לבקרה + מפגשי הכשרה לרכזים/מדריכים", ref:"פרק א' ס' 2.5.3" },
+    { id:"p7i3", num:18, text:"שיתוף פעולה עם הבקרה — גישה מלאה לבקר המשרד", req:"מחויב לאפשר ביקורת, פיקוח ועמידה בהוראות הבקר", ref:"פרק ה' ס' 6.1–6.2", critical:true },
+  ]},
+];
+
+const state = {};
+
+function buildUI() {
+  const cont = document.getElementById('sections-container');
+  SECTIONS.forEach(sec => {
+    const sd = document.createElement('div');
+    sd.className = 'section';
+    const st = document.createElement('div');
+    st.className = 'section-title';
+    st.innerHTML = '<span>' + sec.title + '</span><span class="section-ref">' + sec.ref + '</span>';
+    sd.appendChild(st);
+    sec.items.forEach(item => {
+      state[item.id] = { status: null, note: '' };
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.innerHTML =
+        '<div class="item-row">' +
+          '<div class="item-num">' + item.num + '.</div>' +
+          '<div class="item-text">' +
+            '<div class="item-main">' +
+              (item.critical ? '<span class="tag-critical">חובה</span>' : '') +
+              item.text +
+            '</div>' +
+            '<div class="item-req"><span class="item-ref-badge">' + item.ref + '</span>' + item.req + '</div>' +
+          '</div>' +
+          '<div class="radio-group">' +
+            '<button class="radio-btn" id="ok-' + item.id + '" onclick="setStatus(\'' + item.id + '\',\'yes\')">✓ כן</button>' +
+            '<button class="radio-btn" id="nok-' + item.id + '" onclick="setStatus(\'' + item.id + '\',\'no\')">✗ לא</button>' +
+            '<button class="radio-btn" id="na-' + item.id + '" onclick="setStatus(\'' + item.id + '\',\'na\')">נ/ר</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="note-wrap">' +
+          '<textarea class="note-input" id="note-' + item.id + '" placeholder="הערת בקר (אופציונלי)..." rows="1" ' +
+            'oninput="saveNote(\'' + item.id + '\',this.value);autoGrow(this)"></textarea>' +
+        '</div>';
+      sd.appendChild(card);
+    });
+    cont.appendChild(sd);
+  });
+  document.getElementById('visit-date').value = new Date().toISOString().split('T')[0];
+  updateProgress();
+}
+
+function setStatus(id, val) {
+  const prev = state[id].status;
+  state[id].status = (prev === val) ? null : val;
+  const s = state[id].status;
+  document.getElementById('ok-' + id).className = 'radio-btn' + (s === 'yes' ? ' ok' : '');
+  document.getElementById('nok-' + id).className = 'radio-btn' + (s === 'no' ? ' nok' : '');
+  document.getElementById('na-' + id).className = 'radio-btn' + (s === 'na' ? ' na' : '');
+  updateProgress();
+}
+
+function saveNote(id, val) { state[id].note = val; }
+
+function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+
+function updateProgress() {
+  const ids = Object.keys(state);
+  const filled = ids.filter(k => state[k].status !== null).length;
+  const yes = ids.filter(k => state[k].status === 'yes').length;
+  const no = ids.filter(k => state[k].status === 'no').length;
+  const na = ids.filter(k => state[k].status === 'na').length;
+  const pct = ids.length ? Math.round(filled / ids.length * 100) : 0;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('lbl-total').textContent = filled + ' מתוך ' + ids.length + ' מולאו';
+  document.getElementById('lbl-ok').textContent = '✓ ' + yes + ' כן';
+  document.getElementById('lbl-nok').textContent = '✗ ' + no + ' לא';
+  document.getElementById('lbl-na').textContent = '◌ ' + na + ' נ/ר';
+}
+
+function showSummary() {
+  const nokItems = [], noteItems = [];
+  const ids = Object.keys(state);
+  const yes = ids.filter(k => state[k].status === 'yes').length;
+  const no = ids.filter(k => state[k].status === 'no').length;
+  const na = ids.filter(k => state[k].status === 'na').length;
+  const unfilled = ids.filter(k => state[k].status === null).length;
+
+  SECTIONS.forEach(sec => {
+    sec.items.forEach(item => {
+      const s = state[item.id];
+      if (s.status === 'no') nokItems.push({ section: sec.title, text: item.text, note: s.note, critical: item.critical });
+      if (s.note && s.note.trim() && s.status !== 'no') noteItems.push({ section: sec.title, text: item.text, note: s.note.trim() });
+    });
+  });
+
+  let html = '<div class="summary-box">';
+  html += '<div class="summary-stats">';
+  html += '<div class="stat stat-ok"><div class="stat-num">' + yes + '</div><div class="stat-label">כן — עומד</div></div>';
+  html += '<div class="stat stat-nok"><div class="stat-num">' + no + '</div><div class="stat-label">לא — אינו עומד</div></div>';
+  html += '<div class="stat stat-na"><div class="stat-num">' + na + '</div><div class="stat-label">נ/ר</div></div>';
+  html += '<div class="stat stat-pend"><div class="stat-num">' + unfilled + '</div><div class="stat-label">לא מולא</div></div>';
+  html += '</div>';
+
+  html += '<div class="summary-section-header summary-nok-header">פריטים שאינם עומדים בדרישות (' + nokItems.length + ')</div>';
+  html += '<div class="summary-body">';
+  if (!nokItems.length) {
+    html += '<div class="empty-msg">לא נמצאו פריטים שאינם עומדים בדרישות</div>';
+  } else {
+    nokItems.forEach(it => {
+      html += '<div class="summary-item">';
+      html += '<div class="summary-section-label">' + it.section + (it.critical ? ' · <strong>חובה</strong>' : '') + '</div>';
+      html += '<strong style="color:#A32D2D;">אינו עומד:</strong> ' + it.text;
+      if (it.note) html += '<div class="summary-note-label">הערת בקר: ' + it.note + '</div>';
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+
+  if (noteItems.length) {
+    html += '<div class="summary-section-header summary-notes-header" style="border-top:1px solid #e0e0dc;">הערות נוספות (' + noteItems.length + ')</div>';
+    html += '<div class="summary-body">';
+    noteItems.forEach(it => {
+      html += '<div class="summary-item">';
+      html += '<div class="summary-section-label">' + it.section + '</div>';
+      html += it.text;
+      html += '<div class="summary-note-label">הערה: ' + it.note + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  const box = document.getElementById('summary-box');
+  box.innerHTML = html;
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function submitForm() {
+  const inspector = document.getElementById('inspector').value.trim();
+  const city = document.getElementById('city').value.trim();
+  const branch = document.getElementById('branch').value.trim();
+  const visitDate = document.getElementById('visit-date').value;
+
+  if (!inspector || !city || !branch) {
+    showToast('נא למלא שם בקר, עיר/יישוב ושם הסניף לפני השליחה.', 'error');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  const payload = {
+    formType: FORM_TYPE,
+    inspector, city, branch, visitDate,
+    findings: document.getElementById('findings').value.trim(),
+    nonCompliant: document.getElementById('non-compliant').value.trim(),
+    recommendations: document.getElementById('recommendations').value.trim()
+  };
+  Object.keys(state).forEach(id => { payload[id] = state[id]; });
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'שולח...';
+
+  fetch(SCRIPT_URL, {
+    method: 'POST', mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(() => {
+    showToast('הדוח נשלח בהצלחה ונשמר ב-Google Sheets ✓', 'success');
+    btn.textContent = 'נשלח בהצלחה ✓';
+    btn.style.background = '#3B6D11';
+  })
+  .catch(() => {
+    showToast('שגיאה בשליחה — בדוק חיבור לאינטרנט ונסה שוב.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'שלח דוח לגוגל שיטס ↗';
+  });
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  t.style.display = 'block';
+  if (type === 'success') return;
+  setTimeout(() => { t.style.display = 'none'; }, 5000);
+}
+
+buildUI();
+
+// ===== היסטוריית בקרות =====
+const ALL_IDS_P = ["p1i1","p1i2","p1i3","p2i1","p3i1","p3i2","p3i3","p3i4","p3i5","p4i1","p5i1","p5i2","p5i3","p6i1","p6i2","p7i1","p7i2","p7i3"];
+const ITEM_LABELS_P = {
+  p1i1:"תדירות מפגשים – פעמיים בשבוע", p1i2:"שעות פעילות – אחה\"צ", p1i3:"משך פעילות – 45 דק' לפחות",
+  p2i1:"גיל משתתפים – 15–25",
+  p3i1:"אפיון גיאוגרפי – פריפריה", p3i2:"תמהיל אוכלוסייה – 50%+ לא חרדי", p3i3:"קרבה למוסד חינוכי – 250+ בנ\"נ", p3i4:"כמות מרכזים – עד 3 בעיר", p3i5:"ללא כפילות ממשרד אחר",
+  p4i1:"גבייה – אסורה לחלוטין",
+  p5i1:"אישור זהות צוות", p5i2:"נוכחות רכז מקומי", p5i3:"ללא קבלן משנה",
+  p6i1:"תוכן חווייתי – זהות יהודית", p6i2:"מפגשי העצמה",
+  p7i1:"רישום ותיעוד שוטף", p7i2:"בקרת איכות פנימית", p7i3:"שיתוף פעולה עם הבקרה"
+};
+const SECTIONS_P = [
+  {title:"זמני ושעות",ids:["p1i1","p1i2","p1i3"]},
+  {title:"אוכלוסיית יעד",ids:["p2i1"]},
+  {title:"מיקום",ids:["p3i1","p3i2","p3i3","p3i4","p3i5"]},
+  {title:"גבייה",ids:["p4i1"]},
+  {title:"כוח אדם",ids:["p5i1","p5i2","p5i3"]},
+  {title:"אופי הפעילות",ids:["p6i1","p6i2"]},
+  {title:"תיעוד ובקרה",ids:["p7i1","p7i2","p7i3"]}
+];
+const CRITICAL_P = ["p1i1","p1i3","p2i1","p3i1","p4i1","p5i2","p7i1","p7i3"];
+
+let myRows = [];
+let cEditIndex = null;
+let cEditState = {};
+
+function loadHistory() {
+  const inspectorVal = document.getElementById('inspector').value.trim();
+  const box = document.getElementById('history-box');
+  if (!inspectorVal) {
+    box.style.display = 'block';
+    box.innerHTML = '<div class="history-box-wrap"><div class="history-header">הבקרות שלי</div><div class="history-loading">נא למלא את שמך בשדה "שם הבקר" כדי לראות את הבקרות שלך</div></div>';
+    return;
+  }
+  box.style.display = 'block';
+  box.innerHTML = '<div class="history-box-wrap"><div class="history-header">הבקרות שלי — ' + inspectorVal + '</div><div class="history-loading">טוען...</div></div>';
+
+  fetch(SCRIPT_URL + '?sheet=periphery&t=' + Date.now())
+    .then(r => r.json())
+    .then(data => {
+      const all = data.rows || [];
+      myRows = all.filter(r => (r['שם בקר'] || '').trim() === inspectorVal);
+      myRows.sort((a,b) => new Date(b['תאריך']) - new Date(a['תאריך']));
+      renderHistory(inspectorVal);
+    })
+    .catch(() => {
+      box.innerHTML = '<div class="history-box-wrap"><div class="history-header">הבקרות שלי</div><div class="history-loading" style="color:#A32D2D;">שגיאה בטעינה — בדוק חיבור לאינטרנט</div></div>';
+    });
+}
+
+function renderHistory(name) {
+  const box = document.getElementById('history-box');
+  if (!myRows.length) {
+    box.innerHTML = '<div class="history-box-wrap"><div class="history-header">הבקרות שלי — ' + name + '</div><div class="history-loading">לא נמצאו בקרות</div></div>';
+    return;
+  }
+  let html = '<div class="history-box-wrap"><div class="history-header"><span>הבקרות שלי — ' + name + ' (' + myRows.length + ')</span></div>';
+  myRows.forEach((r, i) => {
+    const d = new Date(r['תאריך']);
+    const dateStr = isNaN(d) ? r['תאריך'] : d.toLocaleDateString('he-IL');
+    const yes = ALL_IDS_P.filter(id => r[id] === 'yes').length;
+    const no = ALL_IDS_P.filter(id => r[id] === 'no').length;
+    html += '<div class="history-item">' +
+      '<div class="history-item-top">' +
+        '<div class="history-item-info">' +
+          '<strong>' + (r['שם סניף'] || '') + '</strong>' +
+          (r['עיר/יישוב'] ? ' — ' + r['עיר/יישוב'] : '') +
+          '<div class="history-item-date">' + dateStr + '</div>' +
+          '<div class="history-stats">' +
+            '<span class="h-ok">✓ ' + yes + ' כן</span>' +
+            (no > 0 ? '<span class="h-nok">✗ ' + no + ' לא</span>' : '<span style="color:#aaa">ללא ממצאים</span>') +
+          '</div>' +
+        '</div>' +
+        '<div class="history-item-actions">' +
+          '<button class="hist-edit-btn" onclick="openCEdit(' + i + ')">עריכה</button>' +
+          '<button class="hist-del-btn" onclick="confirmCDelete(' + i + ')">מחיקה</button>' +
+        '</div>' +
+      '</div></div>';
+  });
+  html += '</div>';
+  box.innerHTML = html;
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function openCEdit(myIdx) {
+  cEditIndex = myIdx;
+  const r = myRows[myIdx];
+  cEditState = {};
+  ALL_IDS_P.forEach(id => {
+    cEditState[id] = { status: r[id] || null, note: (r['הערות_' + id] || '').toString().trim() };
+  });
+  const d = new Date(r['תאריך']);
+  document.getElementById('cm-date').value = isNaN(d) ? '' : d.toISOString().split('T')[0];
+  document.getElementById('cm-inspector').value = r['שם בקר'] || '';
+  document.getElementById('cm-city').value = r['עיר/יישוב'] || '';
+  document.getElementById('cm-branch').value = r['שם סניף'] || '';
+  document.getElementById('cm-findings').value = r['ממצאים עיקריים'] || '';
+  document.getElementById('cm-non-compliant').value = r['פריטים שאינם עומדים'] || '';
+  document.getElementById('cm-recommendations').value = r['המלצות לתיקון'] || '';
+
+  const cont = document.getElementById('cm-items-container');
+  let html = '';
+  SECTIONS_P.forEach(sec => {
+    html += '<div class="c-modal-sec">' + sec.title + '</div>';
+    sec.ids.forEach(id => {
+      const s = cEditState[id];
+      const crit = CRITICAL_P.includes(id) ? '<span style="font-size:10px;padding:1px 5px;border-radius:99px;background:#FCEBEB;color:#A32D2D;border:1px solid #F09595;margin-left:4px;">חובה</span>' : '';
+      html += '<div class="c-modal-item" id="cmitem-' + id + '">' +
+        '<div class="c-modal-item-text">' + crit + ITEM_LABELS_P[id] + '</div>' +
+        '<div class="c-modal-radios">' +
+          '<button class="c-modal-radio' + (s.status === 'yes' ? ' ok' : '') + '" onclick="setCEditStatus(\'' + id + '\',\'yes\')">✓ כן</button>' +
+          '<button class="c-modal-radio' + (s.status === 'no' ? ' nok' : '') + '" onclick="setCEditStatus(\'' + id + '\',\'no\')">✗ לא</button>' +
+          '<button class="c-modal-radio' + (s.status === 'na' ? ' na' : '') + '" onclick="setCEditStatus(\'' + id + '\',\'na\')">נ/ר</button>' +
+        '</div>' +
+        '</div>' +
+        '<textarea class="c-modal-note" id="cmnote-' + id + '" placeholder="הערה..." rows="1" oninput="cEditState[\'' + id + '\'].note=this.value">' + (s.note || '') + '</textarea>';
+    });
+  });
+  cont.innerHTML = html;
+  document.getElementById('cm-msg').className = 'c-modal-msg';
+  document.getElementById('cm-msg').textContent = '';
+  document.getElementById('c-edit-modal').classList.add('open');
+}
+
+function setCEditStatus(id, val) {
+  cEditState[id].status = (cEditState[id].status === val) ? null : val;
+  const btns = document.getElementById('cmitem-' + id).querySelectorAll('.c-modal-radio');
+  const s = cEditState[id].status;
+  btns[0].className = 'c-modal-radio' + (s === 'yes' ? ' ok' : '');
+  btns[1].className = 'c-modal-radio' + (s === 'no' ? ' nok' : '');
+  btns[2].className = 'c-modal-radio' + (s === 'na' ? ' na' : '');
+}
+
+function closeCModal() {
+  document.getElementById('c-edit-modal').classList.remove('open');
+  cEditIndex = null;
+}
+
+function saveCEdit() {
+  const r = myRows[cEditIndex];
+  const origKey = (r['תאריך'] || '') + '||' + (r['שם בקר'] || '') + '||' + (r['שם סניף'] || '');
+  const payload = {
+    formType: FORM_TYPE, action: 'updateByKey', origKey,
+    visitDate: document.getElementById('cm-date').value,
+    inspector: document.getElementById('cm-inspector').value.trim(),
+    city: document.getElementById('cm-city').value.trim(),
+    branch: document.getElementById('cm-branch').value.trim(),
+    findings: document.getElementById('cm-findings').value.trim(),
+    nonCompliant: document.getElementById('cm-non-compliant').value.trim(),
+    recommendations: document.getElementById('cm-recommendations').value.trim()
+  };
+  ALL_IDS_P.forEach(id => { payload[id] = { status: cEditState[id].status || '', note: cEditState[id].note || '' }; });
+
+  const btn = document.querySelector('.c-modal-save');
+  btn.disabled = true; btn.textContent = 'שומר...';
+
+  fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+    .then(() => {
+      ALL_IDS_P.forEach(id => { r[id] = cEditState[id].status || ''; r['הערות_' + id] = cEditState[id].note || ''; });
+      r['שם סניף'] = payload.branch; r['עיר/יישוב'] = payload.city; r['תאריך'] = payload.visitDate;
+      r['ממצאים עיקריים'] = payload.findings; r['פריטים שאינם עומדים'] = payload.nonCompliant; r['המלצות לתיקון'] = payload.recommendations;
+      const msg = document.getElementById('cm-msg');
+      msg.textContent = 'נשמר בהצלחה ✓'; msg.className = 'c-modal-msg success';
+      btn.disabled = false; btn.textContent = 'שמור שינויים';
+      setTimeout(() => { closeCModal(); renderHistory(payload.inspector); }, 1200);
+    })
+    .catch(() => {
+      const msg = document.getElementById('cm-msg');
+      msg.textContent = 'שגיאה — נסה שוב'; msg.className = 'c-modal-msg error';
+      btn.disabled = false; btn.textContent = 'שמור שינויים';
+    });
+}
+
+function confirmCDelete(myIdx) {
+  const r = myRows[myIdx];
+  const d = new Date(r['תאריך']);
+  const dateStr = isNaN(d) ? r['תאריך'] : d.toLocaleDateString('he-IL');
+  if (!confirm('למחוק את הבקרה מיום ' + dateStr + ' בסניף ' + (r['שם סניף'] || '') + '?')) return;
+  const origKey = (r['תאריך'] || '') + '||' + (r['שם בקר'] || '') + '||' + (r['שם סניף'] || '');
+  fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ formType: FORM_TYPE, action:'deleteByKey', origKey }) })
+    .then(() => { myRows.splice(myIdx, 1); renderHistory(r['שם בקר'] || ''); })
+    .catch(() => alert('שגיאה במחיקה'));
+}
+</script>
+</body>
+</html>

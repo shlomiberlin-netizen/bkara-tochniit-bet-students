@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ריכוז בקרות שטח</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #f2f2f0; color: #1a1a1a; direction: rtl; min-height: 100vh; }
+
+.topbar { background: #0C447C; color: #fff; padding: 20px 24px; text-align: center; }
+.topbar h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.topbar p { font-size: 13px; opacity: 0.8; }
+
+.page { max-width: 900px; margin: 0 auto; padding: 28px 16px; }
+
+.section-label { font-size: 11px; font-weight: 700; color: #888; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; padding-right: 4px; }
+
+.cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+
+.prog-card { background: #fff; border: 1px solid #e0e0dc; border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+
+.prog-card-header { display: flex; align-items: flex-start; gap: 14px; }
+.prog-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+.icon-blue { background: #E6F1FB; }
+.icon-green { background: #EAF3DE; }
+
+.prog-card-title { font-size: 16px; font-weight: 700; color: #1a1a1a; margin-bottom: 3px; }
+.prog-card-sub { font-size: 12px; color: #777; line-height: 1.5; }
+
+.prog-card-actions { display: flex; gap: 10px; }
+.btn-primary { flex: 1; padding: 10px 14px; background: #185FA5; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: Arial, sans-serif; text-align: center; text-decoration: none; display: block; transition: background 0.15s; }
+.btn-primary:hover { background: #0C447C; }
+.btn-secondary { flex: 1; padding: 10px 14px; background: #f5f5f3; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: Arial, sans-serif; text-align: center; text-decoration: none; display: block; color: #333; transition: background 0.15s; }
+.btn-secondary:hover { background: #eee; }
+
+.prog-card-badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 99px; font-weight: 600; }
+.badge-blue { background: #E6F1FB; color: #185FA5; }
+.badge-green { background: #EAF3DE; color: #3B6D11; }
+
+.info-box { background: #fff; border: 1px solid #e0e0dc; border-radius: 12px; padding: 18px 20px; margin-top: 10px; }
+.info-box h3 { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 10px; }
+.info-list { list-style: none; }
+.info-list li { font-size: 13px; color: #555; padding: 5px 0; border-bottom: 1px solid #f5f5f3; display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
+.info-list li:last-child { border-bottom: none; }
+.info-list li::before { content: "•"; color: #185FA5; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+.footer { text-align: center; padding: 20px; font-size: 12px; color: #aaa; border-top: 1px solid #e8e8e5; margin-top: 20px; }
+
+@media (max-width: 580px) {
+  .cards-grid { grid-template-columns: 1fr; }
+  .topbar h1 { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>ריכוז בקרות שטח</h1>
+  <p>מערכת בקרה שטחית — משרד ההתיישבות והמשימות הלאומיות</p>
+</div>
+
+<div class="page">
+
+  <div class="section-label">טפסי בקרה פעילים</div>
+
+  <div class="cards-grid">
+
+    <!-- תכנית ב' -->
+    <div class="prog-card">
+      <div class="prog-card-header">
+        <div class="prog-icon icon-blue">📋</div>
+        <div>
+          <div class="prog-card-title">תכנית ב׳ — מעגל השנה</div>
+          <div class="prog-card-sub">בקרת עמידה בתנאי תכנית ב׳: אירועים, פעילויות שוטפות וניהול סניפים</div>
+        </div>
+      </div>
+      <div>
+        <span class="prog-card-badge badge-blue">28 סעיפי בקרה</span>
+      </div>
+      <div class="prog-card-actions">
+        <a class="btn-primary" href="checklist_tochniit_bet.html">טופס בקרה ›</a>
+        <a class="btn-secondary" href="dashboard_tochniit_bet.html">דשבורד מנהל</a>
+      </div>
+    </div>
+
+    <!-- פריפריה -->
+    <div class="prog-card">
+      <div class="prog-card-header">
+        <div class="prog-icon icon-green">🗂️</div>
+        <div>
+          <div class="prog-card-title">מכרז פריפריה</div>
+          <div class="prog-card-sub">בדיקת עמידת ספק בתנאי מכרז הפריפריה — משרד ההתיישבות | שמידט בן צבי פרלשטיין</div>
+        </div>
+      </div>
+      <div>
+        <span class="prog-card-badge badge-green">18 סעיפי בקרה</span>
+      </div>
+      <div class="prog-card-actions">
+        <a class="btn-primary" href="checklist_periphery.html">טופס בקרה ›</a>
+        <a class="btn-secondary" href="dashboard_periphery.html">דשבורד מנהל</a>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="info-box">
+    <h3>הוראות שימוש</h3>
+    <ul class="info-list">
+      <li>בחר את סוג הבקרה המתאים ולחץ על "טופס בקרה" כדי למלא דוח שטח חדש.</li>
+      <li>הנתונים נשמרים אוטומטית ב-Google Sheets ומסונכרנים לדשבורד המנהל בזמן אמת.</li>
+      <li>בטופס מכרז הפריפריה: <strong>✓ כן</strong> = עומד בדרישה, <strong>✗ לא</strong> = אינו עומד, <strong>נ/ר</strong> = לא נבדק/לא רלוונטי.</li>
+      <li>לכל טופס ניתן לצפות בהיסטוריית הבקרות שלך, לערוך ולמחוק רשומות קיימות.</li>
+      <li>הדשבורד מציג נתוני ביצועים, גרפי מגמות וסינון מתקדם לפי בקר, תאריך ומיקום.</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="footer">
+  ריכוז בקרות שטח | משרד ההתיישבות והמשימות הלאומיות
+</div>
+
+</body>
+</html>
